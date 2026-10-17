@@ -166,8 +166,8 @@ open project -> navigate fast -> edit fast -> run in terminal -> inspect git
 ### Build from Source
 
 ```bash
-git clone https://github.com/hightowerbuilds/buster.git
-cd buster
+git clone https://github.com/hightowerbuilds/bustermark.git
+cd bustermark
 bun install
 bun run tauri build
 ```
@@ -1523,7 +1523,7 @@ BusterMark includes accessibility features for keyboard-only and screen reader u
 
 ### Reporting Issues
 
-File bugs and feature requests at [github.com/hightowerbuilds/buster/issues](https://github.com/hightowerbuilds/buster/issues).
+File bugs and feature requests at [github.com/hightowerbuilds/bustermark/issues](https://github.com/hightowerbuilds/bustermark/issues).
 
 Security vulnerabilities should be reported to security@hightowerbuilds.com. See SECURITY.md for the full disclosure policy.
 
