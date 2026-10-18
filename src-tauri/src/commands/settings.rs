@@ -46,12 +46,15 @@ pub struct AppSettings {
     pub ui_zoom: u32,
     #[serde(default)]
     pub recent_folders: Vec<String>,
-    /// Theme mode: "dark", "light", or "custom"
+    /// Theme mode: "dark", "light", "custom", or "scheme"
     #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
     /// Seed hue (0–360) for generated palette, or -1 for Catppuccin Mocha
     #[serde(default = "default_hue")]
     pub theme_hue: i32,
+    /// The saved color scheme shown when `theme_mode` is "scheme" (`color-schemes.json`).
+    #[serde(default)]
+    pub theme_scheme_id: String,
     #[serde(default)]
     pub effect_bg_glow: u32,
     #[serde(default)]
@@ -159,6 +162,7 @@ impl Default for AppSettings {
             recent_folders: Vec::new(),
             theme_mode: "dark".to_string(),
             theme_hue: -1,
+            theme_scheme_id: String::new(),
             effect_bg_glow: 0,
             effect_cursor_glow: 0,
             effect_vignette: 0,

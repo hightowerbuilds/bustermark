@@ -8,6 +8,7 @@
 
 import { Component } from "solid-js";
 import CanvasChrome, { CHROME_FONT, type HitRegion, type PaintFn } from "./canvas-chrome";
+import { useBuster } from "../lib/buster-context";
 
 // ── Props ────────────────────────────────────────────────────────────
 
@@ -36,15 +37,16 @@ const CanvasSidebarHeader: Component<CanvasSidebarHeaderProps> = (props) => {
   const actionCount = () => props.hasWorkspace && props.onCloseDirectory ? 4 : 3;
   const totalHeight = () => HEADER_H + actionCount() * ACTION_BTN_H + (actionCount() - 1) * ACTION_GAP + ACTION_GAP * 2;
 
+  const { store } = useBuster();
   const paint: PaintFn = (ctx, w, h, hovered): HitRegion[] => {
-    const root = document.documentElement;
-    const style = getComputedStyle(root);
-    const bg = style.getPropertyValue("--bg-mantle").trim() || "#181825";
-    const textColor = style.getPropertyValue("--text").trim() || "#cdd6f4";
-    const textDim = style.getPropertyValue("--text-dim").trim() || "#a6adc8";
-    const surface0 = style.getPropertyValue("--bg-surface0").trim() || "#313244";
-    const borderColor = style.getPropertyValue("--border").trim() || "#313244";
-    const accentColor = style.getPropertyValue("--accent").trim() || "#89b4fa";
+    // Reading palette fields (not CSS variables) repaints the canvas when the color scheme changes.
+    const palette = store.palette;
+    const bg = palette.cssMantle;
+    const textColor = palette.text;
+    const textDim = palette.textDim;
+    const surface0 = palette.surface0;
+    const borderColor = palette.border;
+    const accentColor = palette.accent;
 
     const regions: HitRegion[] = [];
 

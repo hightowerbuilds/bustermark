@@ -258,6 +258,9 @@ pub fn run() {
             commands::backgrounds::background_save,
             commands::backgrounds::background_delete,
             commands::backgrounds::backgrounds_configure,
+            commands::color_schemes::color_schemes_load,
+            commands::color_schemes::color_scheme_save,
+            commands::color_schemes::color_scheme_delete,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

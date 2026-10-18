@@ -1,11 +1,10 @@
 import BackgroundGallery from "./BackgroundGallery";
+import ColorSchemeGallery from "./ColorSchemeGallery";
 import { Component, For, Show, createSignal, createUniqueId } from "solid-js";
 import type { AppSettings } from "../lib/ipc";
 import { useBuster } from "../lib/buster-context";
 import { DEFAULT_KEYBINDINGS } from "../lib/app-commands";
 import { findKeybindingConflicts, normalizeHotkey } from "../lib/keybinding-conflicts";
-import { importVSCodeTheme, type ThemeEffects } from "../lib/theme";
-import { showError, showSuccess } from "../lib/notify";
 import { BLOG_THEMES, writingStyle } from "../lib/blog-themes";
 
 interface SettingsPanelProps {
@@ -47,7 +46,7 @@ const writingShortcut = (id: string) => id in WRITING_SHORTCUT_LABELS || id.star
 // --- Component ---
 
 const SettingsPanel: Component<SettingsPanelProps> = (props) => {
-  const { store } = useBuster();
+  const { store, colorSchemes } = useBuster();
   const palette = () => store.palette;
   const [activeTab, setActiveTab] = createSignal<SettingsTab>("Appearances");
   const tabId = createUniqueId();
@@ -72,7 +71,12 @@ const SettingsPanel: Component<SettingsPanelProps> = (props) => {
   }
 
   const themeHue = () => props.settings.theme_hue ?? -1;
-  const themeMode = () => props.settings.theme_mode || "dark";
+  // What is on screen: a missing scheme, or a retired mode such as "imported", shows Dark.
+  const themeMode = () => {
+    const mode = props.settings.theme_mode;
+    if (mode === "scheme") return colorSchemes.byId(props.settings.theme_scheme_id) ? "scheme" : "dark";
+    return mode === "light" || mode === "custom" ? mode : "dark";
+  };
 
   function renderItem(item: SettingsItem) {
     switch (item.type) {
@@ -108,53 +112,24 @@ const SettingsPanel: Component<SettingsPanelProps> = (props) => {
             <div class="settings-row-inner">
               <div class="settings-info">
                 <span class="settings-label">Color Scheme</span>
-                <span class="settings-desc">Dark, Light, or custom</span>
+                <span class="settings-desc">Dark, Light, a hue of your choice, or a scheme you describe</span>
               </div>
               <div class="settings-theme-btns">
                 <button
                   class={`settings-theme-btn ${themeMode() === "dark" ? "settings-theme-btn-active" : ""}`}
-                  onClick={() => { update("theme_mode", "dark"); update("theme_hue", -1); }}
+                  aria-pressed={themeMode() === "dark"}
+                  onClick={() => props.onChange({ ...props.settings, theme_mode: "dark", theme_hue: -1 })}
                 >Dark</button>
                 <button
                   class={`settings-theme-btn ${themeMode() === "light" ? "settings-theme-btn-active" : ""}`}
-                  onClick={() => { update("theme_mode", "light"); update("theme_hue", -1); }}
+                  aria-pressed={themeMode() === "light"}
+                  onClick={() => props.onChange({ ...props.settings, theme_mode: "light", theme_hue: -1 })}
                 >Light</button>
                 <button
                   class={`settings-theme-btn ${themeMode() === "custom" ? "settings-theme-btn-active" : ""}`}
-                  onClick={() => { update("theme_mode", "custom"); update("theme_hue", themeHue() >= 0 ? themeHue() : 200); }}
+                  aria-pressed={themeMode() === "custom"}
+                  onClick={() => props.onChange({ ...props.settings, theme_mode: "custom", theme_hue: themeHue() >= 0 ? themeHue() : 200 })}
                 >Custom</button>
-                <button
-                  class={`settings-theme-btn ${themeMode() === "imported" ? "settings-theme-btn-active" : ""}`}
-                  onClick={() => {
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = ".json";
-                    input.onchange = () => {
-                      const file = input.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        try {
-                          const json = JSON.parse(reader.result as string);
-                          localStorage.setItem("buster-imported-theme", reader.result as string);
-                          const fx: ThemeEffects = {
-                            bgGlow: props.settings.effect_cursor_glow ?? 0,
-                            cursorGlow: props.settings.effect_cursor_glow ?? 0,
-                            vignette: props.settings.effect_vignette ?? 0,
-                            grain: props.settings.effect_grain ?? 0,
-                          };
-                          importVSCodeTheme(json, fx);
-                          update("theme_mode", "imported");
-                          showSuccess("Theme imported");
-                        } catch {
-                          showError("Invalid theme file");
-                        }
-                      };
-                      reader.readAsText(file);
-                    };
-                    input.click();
-                  }}
-                >Import</button>
               </div>
             </div>
             <Show when={themeMode() === "custom"}>
@@ -190,6 +165,7 @@ const SettingsPanel: Component<SettingsPanelProps> = (props) => {
                 </div>
               </div>
             </Show>
+            <ColorSchemeGallery settings={props.settings} onChange={props.onChange} />
           </div>
         );
       case "spread_motion": {

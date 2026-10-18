@@ -1,0 +1,59 @@
+{
+  "ok": true,
+  "checks": [
+    "A note with two paragraphs is open",
+    "light: the approval card names the scheme",
+    "light: the preview shows all eight colors",
+    "light: Allow saves the scheme and shows it, selection included",
+    "dark: the approval card names the scheme",
+    "dark: the preview shows all eight colors",
+    "dark: Allow saves the scheme and shows it, selection included",
+    "Settings lists both saved schemes",
+    "Clicking a card shows that scheme and marks it",
+    "Courier and a shader background apply under the dark scheme"
+  ],
+  "metrics": {
+    "light": {
+      "approvalMs": 4365,
+      "rejectedFirst": 0,
+      "rejections": [],
+      "previewBackground": "rgb(247, 241, 227)",
+      "colors": {
+        "background": "#f7f1e3",
+        "surface": "#efe6d0",
+        "text": "#2b2118",
+        "textDim": "#5a4a3a",
+        "textMuted": "#8a7866",
+        "accent": "#9a4a1f",
+        "accent2": "#3d6b5a",
+        "selection": "rgba(154, 74, 31, 0.22)"
+      },
+      "selectionPseudo": "rgba(154, 74, 31, 0.22)"
+    },
+    "stages": [
+      "light-approval",
+      "light-selection",
+      "dark-approval",
+      "dark-selection",
+      "settings-gallery",
+      "dark-courier-shader"
+    ],
+    "dark": {
+      "approvalMs": 3000,
+      "rejectedFirst": 0,
+      "rejections": [],
+      "previewBackground": "rgb(11, 16, 32)",
+      "colors": {
+        "background": "#0b1020",
+        "surface": "#141c33",
+        "text": "#e6ebf5",
+        "textDim": "#a9b4cc",
+        "textMuted": "#7d89a6",
+        "accent": "#7fa8e0",
+        "accent2": "#9bb8d9",
+        "selection": "rgba(127, 168, 224, 0.35)"
+      }
+    }
+  },
+  "pageErrors": []
+}

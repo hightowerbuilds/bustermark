@@ -128,6 +128,38 @@ background clear
   frames a second, paused while the window is hidden, and as a still frame when
   animation is off or the system asks for reduced motion.
 
+## Color schemes
+
+Eight colors the Language Model makes from the writer's description. The writer
+picks, renames, or deletes them in Settings → Appearances → Color Scheme, below
+Dark, Light, and Custom; **Describe a scheme…** opens the sidebar with the
+request started. See `growth/phases/color-schemes.md` for the design.
+
+```text
+color schemes list
+color scheme read {"id":"scheme-1790000000000"}
+color scheme create {"name":"Sepia","prompt":"warm sepia for late nights","colors":{"background":"#f4ecd8","surface":"#e9dfc6","text":"#3a2e1f","textDim":"#5e4d36","textMuted":"#8a7a62","accent":"#9a4f1c","accent2":"#5b6e3a","selection":"rgba(154, 79, 28, 0.3)"}}
+color scheme update {"id":"scheme-1790000000000","colors":{...}}
+color scheme apply {"id":"light"}
+```
+
+- A scheme is `background`, `surface`, `text`, `textDim`, `textMuted`, `accent`,
+  `accent2`, and a translucent `selection` (alpha 0.2–0.6, because WebKit washes
+  out an opaque `::selection`). The rest of the palette is derived from them.
+- `create` and `update` check readability before approval (WCAG 2 contrast):
+  text 7:1 on the background and 4.5:1 on surfaces, dim text 4.5:1, muted text
+  2.25:1, accent 3:1, and a selection that stands out (1.25:1) while text on it
+  stays 4.5:1. Failures return as `SCHEME_UNREADABLE` with each measured ratio;
+  malformed colors return as `INVALID_COLOR`. The approval card shows a preview
+  page in the proposed colors. `create` also shows the scheme unless `"apply": false`.
+- `list` reports what is shown (a scheme ID, `dark`, `light`, or `custom` with its
+  hue) and the eight colors currently on screen, so a scheme can be adjusted.
+  `apply` takes a saved ID or the built-in `dark` or `light`.
+- Schemes are stored in the app config directory as `color-schemes.json`. The
+  shown scheme is the `theme_mode: "scheme"` and `theme_scheme_id` settings; a
+  missing scheme shows Dark. There is no delete command: the writer deletes in
+  Settings.
+
 ## Editing note text
 
 `document edit` changes the words in an open note. Read the note first, then

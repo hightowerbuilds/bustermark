@@ -8,6 +8,7 @@ pub mod assistant;
 pub mod ai_cli;
 pub mod chat_history;
 pub mod backgrounds;
+pub mod color_schemes;
 pub mod lookup;
 pub mod speech;
 pub mod web_search;

@@ -86,7 +86,8 @@
   },
   "macos_enhancements": [
     "Optional two-pane split view for notes and Settings, pane selectors, resizing, and saved layout",
-    "Native Mac printing and Save as PDF with a themed confirmation dialog shared by human and model commands"
+    "Native Mac printing and Save as PDF with a themed confirmation dialog shared by human and model commands",
+    "Color schemes made by the Language Model from a description, checked for readable contrast, previewed before approval, and saved to a Settings gallery; VS Code theme Import removed (growth/phases/color-schemes.md)"
   ],
   "added_shared_files": [
     "src-tauri/src/commands/printing.rs",
@@ -97,6 +98,7 @@
     "src/lib/split-view.ts",
     "src/styles/print.css",
     "src/ui/PrintDialog.test.ts",
-    "src/ui/PrintDialog.tsx"
+    "src/ui/PrintDialog.tsx",
+    "src-tauri/src/commands/color_schemes.rs"
   ]
 }

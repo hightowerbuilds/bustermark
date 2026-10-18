@@ -85,6 +85,7 @@ export interface BusterContextValue {
   speech: ReturnType<typeof import("./speech").createSpeech>;
   assistant: import("./assistant-workspace").AssistantWorkspace;
   backgrounds: import("./backgrounds").BackgroundService;
+  colorSchemes: import("./color-schemes").ColorSchemeService;
   printing: import("./printing").PrintingService;
 }
 

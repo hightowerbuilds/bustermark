@@ -7,6 +7,7 @@
 
 import { Component, createSignal, createEffect, onCleanup } from "solid-js";
 import CanvasChrome, { CHROME_FONT, type HitRegion, type PaintFn } from "./canvas-chrome";
+import { useBuster } from "../lib/buster-context";
 
 // ── Props ────────────────────────────────────────────────────────────
 
@@ -49,14 +50,12 @@ const CanvasStatusBar: Component<CanvasStatusBarProps> = (props) => {
 
   const dots = () => ".".repeat(dotPhase() || 0);
 
+  const { store } = useBuster();
   const paint: PaintFn = (ctx, w, h) => {
-    // We don't use useBuster here — palette comes via CSS variable mapping
-    // Actually, we need the accent color for the background. Let's read from DOM.
-    // Status bar bg is the accent color. We can get it from the CSS variable.
-    // But for canvas, we need the actual value. Let's use getComputedStyle.
-    const root = document.documentElement;
-    const accent = getComputedStyle(root).getPropertyValue("--accent").trim() || "#89b4fa";
-    const textOnAccent = getComputedStyle(root).getPropertyValue("--bg-crust").trim() || "#11111b";
+    // Drawn in the accent color. Reading palette fields (not CSS variables) repaints the
+    // canvas when the color scheme changes.
+    const accent = store.palette.accent;
+    const textOnAccent = store.palette.cssCrust;
 
     const regions: HitRegion[] = [];
 

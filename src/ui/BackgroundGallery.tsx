@@ -2,6 +2,7 @@ import { For, Show, createResource, createSignal } from "solid-js";
 import { useBuster } from "../lib/buster-context";
 import { backgroundThumbnail } from "../lib/background-thumbnails";
 import type { BackgroundItem } from "../lib/backgrounds";
+import GalleryCard from "./GalleryCard";
 import "../styles/backgrounds.css";
 
 /** Settings → Appearances: saved WGSL backgrounds to pick from, plus strength and motion. */
@@ -17,52 +18,17 @@ export default function BackgroundGallery() {
   }
 
   const Card = (props: { item: BackgroundItem }) => {
-    const [renaming, setRenaming] = createSignal(false);
-    const [name, setName] = createSignal("");
-    const [saving, setSaving] = createSignal(false);
-    let renameButton!: HTMLButtonElement;
-    const closeRename = () => { setRenaming(false); renameButton?.focus(); };
-    const saveName = async () => {
-      if (saving()) return;
-      setSaving(true); setError("");
-      try { await backgrounds.rename(props.item.id, name()); closeRename(); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-      finally { setSaving(false); }
-    };
     const [image] = createResource(() => props.item.wgsl, wgsl => backgroundThumbnail(wgsl, backgrounds.compile).catch(() => ""));
-    const selected = () => state.selected === props.item.id;
     return (
-      <div class="bg-card" classList={{ "bg-card-selected": selected() }}>
-        <button type="button" role="radio" aria-checked={selected()} class="bg-card-pick"
-          title={props.item.prompt || props.item.name} onClick={() => void run(() => backgrounds.select(props.item.id))}>
-          <Show when={image()} fallback={<span class="bg-thumb bg-thumb-empty">{image.loading ? "Rendering…" : "Can't preview"}</span>}>
-            <img class="bg-thumb" src={image()} alt="" />
-          </Show>
-          <span class="bg-card-name">{props.item.name}</span>
-          <Show when={props.item.prompt}><span class="bg-card-prompt">{props.item.prompt}</span></Show>
-        </button>
-        <button ref={renameButton} type="button" class="bg-card-rename" aria-label={`Rename ${props.item.name}`}
-          onClick={() => { setName(props.item.name); setRenaming(true); }}>Rename</button>
-        <Show when={renaming()}>
-          <form class="bg-card-rename-form" onSubmit={e => { e.preventDefault(); void saveName(); }}
-            onKeyDown={e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!saving()) closeRename(); } }}>
-            <input aria-label="Background name" value={name()} required disabled={saving()}
-              ref={el => queueMicrotask(() => { el.focus(); el.select(); })}
-              onInput={e => setName(e.currentTarget.value)} />
-            <button type="submit" disabled={saving() || !name().trim()}>{saving() ? "Saving…" : "Save"}</button>
-            <button type="button" disabled={saving()} onClick={closeRename}>Cancel</button>
-          </form>
-        </Show>
-        <Show when={confirming() === props.item.id} fallback={
-          <button type="button" class="bg-card-delete" aria-label={`Delete ${props.item.name}`} title="Delete" onClick={() => setConfirming(props.item.id)}>×</button>
-        }>
-          <div class="bg-card-confirm" role="group" aria-label={`Delete ${props.item.name}?`}>
-            <span>Delete?</span>
-            <button type="button" onClick={() => { setConfirming(null); void run(() => backgrounds.remove(props.item.id)); }}>Delete</button>
-            <button type="button" onClick={() => setConfirming(null)}>Keep</button>
-          </div>
-        </Show>
-      </div>
+      <GalleryCard noun="Background" name={props.item.name} prompt={props.item.prompt} selected={state.selected === props.item.id}
+        thumb={<Show when={image()} fallback={<span class="bg-thumb bg-thumb-empty">{image.loading ? "Rendering…" : "Can't preview"}</span>}>
+          <img class="bg-thumb" src={image()} alt="" />
+        </Show>}
+        confirming={confirming() === props.item.id} onConfirming={open => setConfirming(open ? props.item.id : null)}
+        onPick={() => void run(() => backgrounds.select(props.item.id))}
+        onRename={name => backgrounds.rename(props.item.id, name)}
+        onDelete={() => void run(() => backgrounds.remove(props.item.id))}
+        onError={setError} />
     );
   };
 

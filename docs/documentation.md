@@ -1020,7 +1020,7 @@ BusterMark's theme engine generates a full IDE palette from a single seed hue us
 
 The base theme is Catppuccin Mocha. Custom hue rotation shifts the entire palette while maintaining contrast ratios. Light mode inverts the luminance relationships.
 
-VS Code themes can be imported and mapped to BusterMark's palette system.
+Writers can also describe a color scheme to the Language Model, which makes eight readable colors that expand into the full palette (see `growth/phases/color-schemes.md`). VS Code theme import was removed on 2026-10-17.
 
 ### Canvas Effects
 

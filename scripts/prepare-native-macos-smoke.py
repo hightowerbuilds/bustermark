@@ -7,7 +7,7 @@ import tempfile
 import uuid
 
 parser = argparse.ArgumentParser()
-parser.add_argument("kind", choices=["print", "split", "spread", "assistant"])
+parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme"])
 parser.add_argument("--only", choices=["courier", "polish", "emphasis"], help="run a single section of the spread smoke test")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
@@ -37,6 +37,17 @@ prefix = Path(f"/private/tmp/bustermark-macos-{args.kind}-smoke")
 Path(f"{prefix}-config.json").write_text(json.dumps(config))
 Path(f"{prefix}-dist.txt").write_text(str(dist))
 notes = Path.home() / "Library/Application Support" / identifier / "Notes"
+if args.kind == "scheme":
+    # A calm shader for the last stage, saved where the app keeps backgrounds (not selected yet).
+    backgrounds = notes.parent / "backgrounds"
+    backgrounds.mkdir(parents=True, exist_ok=True)
+    (backgrounds / "bg-smoke.wgsl").write_text(
+        "@fragment fn fs_main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n"
+        "  let uv = pos.xy / u.resolution;\n"
+        "  let w = 0.5 + 0.5 * sin(uv.x * 5.0 + uv.y * 3.0 + u.time * 0.2);\n"
+        "  return mix(u.paper, u.accent, w * 0.35 * u.strength);\n}\n")
+    (backgrounds / "index.json").write_text(json.dumps({"version": 1, "selected": None, "strength": 0.35, "animate": False,
+        "items": [{"id": "bg-smoke", "name": "Smoke waves", "prompt": "", "createdAt": 1, "updatedAt": 1}]}))
 Path(f"{prefix}-root.txt").write_text(str(notes))
 print(f"Config: {prefix}-config.json")
 print(f"Report: {notes}/{harness.removesuffix('.js')}-result.json")

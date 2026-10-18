@@ -77,6 +77,15 @@ formatting, phrase selections, and the hard-break fallback without model request
 landing after Bold, resizing, printing, Spread Motion, and Spelling (one live
 Claude Haiku request) in about forty seconds.
 
+`python3 scripts/prepare-native-macos-smoke.py scheme` stages the color scheme
+check (growth/phases/color-schemes.md). It seeds a test shader background, then
+Claude Haiku makes a light and a dark scheme, each approved from its preview; the
+Settings gallery switches between them, and Courier and the shader background are
+applied under the dark scheme. At each `stage` in the report the page waits for an
+`ack-<stage>.txt` in its Notes folder, so a screenshot of WebKit's real selection
+painting can be taken from outside first. Two small live requests; about two
+minutes. Its report is `Notes/native-macos-scheme-smoke-result.json`.
+
 `python3 scripts/prepare-native-macos-smoke.py assistant` stages the live
 Assistant check: Claude Code, Codex, and OpenCode each read the open notes and
 edit one after approval, then Claude shows Deny, Stop, and switching provider. It

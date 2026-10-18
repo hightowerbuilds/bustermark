@@ -92,6 +92,7 @@ export interface AppSettings {
   recent_folders: string[];
   theme_mode: string;
   theme_hue: number;
+  theme_scheme_id: string;
   effect_cursor_glow: number;
   effect_vignette: number;
   effect_grain: number;

@@ -50,6 +50,8 @@ import { createPrinting, registerPrintCommands } from "./printing";
 import { printPrinters, printDocument } from "./ipc";
 import { createBackgrounds, nativeBackgroundIpc } from "./backgrounds";
 import { registerBackgroundCommands } from "./background-commands";
+import { createColorSchemes, nativeColorSchemeIpc } from "./color-schemes";
+import { registerColorSchemeCommands } from "./color-scheme-commands";
 import { registerWebSearchCommands } from "./web-search";
 import { createClaudeCodeTransport } from "./assistant-transport";
 import { isMarkdownPath } from "../editor/writing-viewport";
@@ -69,6 +71,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   recent_folders: [],
   theme_mode: "dark",
   theme_hue: -1,
+  theme_scheme_id: "",
   effect_cursor_glow: 0,
   effect_vignette: 0,
   effect_grain: 0,
@@ -165,8 +168,17 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
 
   // ── Create actions via dependency injection ─────────────────
 
-  const allActions = createBusterActions({ store, setStore, engines, extChangeDiskContent, canSave: id => !externalChanges.has(id) });
+  const colorSchemes = createColorSchemes(nativeColorSchemeIpc);
+  void colorSchemes.load();
+  const allActions = createBusterActions({ store, setStore, engines, extChangeDiskContent, canSave: id => !externalChanges.has(id),
+    schemeColors: id => colorSchemes.byId(id)?.colors });
   const actions = allActions; // allActions includes internal methods too
+  // A shown scheme repaints when the library loads or the scheme's colors change.
+  createEffect(() => {
+    if (store.settings.theme_mode !== "scheme") return;
+    JSON.stringify(colorSchemes.byId(store.settings.theme_scheme_id)?.colors ?? null);
+    untrack(() => actions.rebuildPalette(store.settings));
+  });
   const commands = createWorkbenchCommands({
     tabs: () => store.tabs,
     activeTabId: () => store.activeTabId,
@@ -288,6 +300,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
   const backgrounds = createBackgrounds(nativeBackgroundIpc);
   void backgrounds.load();
   registerBackgroundCommands(commands, backgrounds);
+  registerColorSchemeCommands(commands, colorSchemes, { settings: () => store.settings, update: actions.updateSettings, palette: () => store.palette });
   registerWebSearchCommands(commands);
   const printing = createPrinting({
     tabs: () => store.tabs,
@@ -517,7 +530,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
 
   // ── Build context value ─────────────────────────────────────
 
-  const ctx: BusterContextValue = { store, setStore, engines, actions, commands, writing, speech, appearance, formatting, search, assistant, backgrounds, printing };
+  const ctx: BusterContextValue = { store, setStore, engines, actions, commands, writing, speech, appearance, formatting, search, assistant, backgrounds, colorSchemes, printing };
 
   return (
     <BusterContext.Provider value={ctx}>

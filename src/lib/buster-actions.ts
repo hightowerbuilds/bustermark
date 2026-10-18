@@ -11,6 +11,7 @@ import type { BusterStoreState } from "./store-types";
 import type { EngineMap, BusterActions } from "./buster-context";
 import type { EditorEngine } from "../editor/engine";
 import type { AppSettings } from "./ipc";
+import type { SchemeColors } from "./color-schemes";
 
 import { createThemeActions } from "./actions-theme";
 import { createSettingsActions } from "./actions-settings";
@@ -28,6 +29,8 @@ export interface ActionDeps {
   engines: EngineMap;
   extChangeDiskContent: { value: string; resolve?: (result: import("../ui/ExternalChangeDialog").ExternalChangeResult) => void };
   canSave?: (tabId: string) => boolean;
+  /** The colors of a saved color scheme, for `theme_mode: "scheme"`. */
+  schemeColors?: (id: string) => SchemeColors | undefined;
 }
 
 // ── Factory ───────────────────────────────────────────────────────
@@ -42,7 +45,7 @@ export function createBusterActions(deps: ActionDeps): BusterActions & {
 
   // ── Compose domain modules ──────────────────────────────────
 
-  const theme = createThemeActions(setStore);
+  const theme = createThemeActions(setStore, deps.schemeColors);
   const settings = createSettingsActions(store, setStore, theme.rebuildPalette);
   const workspace = createWorkspaceActions(store, setStore, settings.updateSettings);
   const files = createFileActions(store, setStore, switchToTab, settings.addRecentFile);

@@ -2,12 +2,20 @@ import type { SetStoreFunction } from "solid-js/store";
 import type { BusterStoreState } from "./store-types";
 import type { AppSettings } from "./ipc";
 import type { ThemePalette } from "./theme";
+import { paletteFromScheme, type SchemeColors } from "./color-schemes";
 import {
-  CATPPUCCIN, LIGHT_THEME, generatePalette, importVSCodeTheme,
+  CATPPUCCIN, LIGHT_THEME, generatePalette,
   applyPaletteToCss, clearCssOverrides, withSyntaxOverrides,
 } from "./theme";
 
-export function createThemeActions(setStore: SetStoreFunction<BusterStoreState>) {
+export function createThemeActions(
+  setStore: SetStoreFunction<BusterStoreState>,
+  schemeColors: (id: string) => SchemeColors | undefined = () => undefined,
+) {
+  // VS Code theme import was removed (growth/phases/color-schemes.md); drop the file it stored.
+  // A stale theme_mode "imported" falls through to Dark below.
+  try { localStorage.removeItem("buster-imported-theme"); } catch { /* no storage */ }
+
   function rebuildPalette(s: AppSettings) {
     const fx = {
       bgGlow: 0,
@@ -16,38 +24,20 @@ export function createThemeActions(setStore: SetStoreFunction<BusterStoreState>)
       grain: s.effect_grain ?? 0,
     };
     const mode = s.theme_mode || "dark";
-    let p: ThemePalette;
-
-    if (mode === "imported") {
-      try {
-        const raw = localStorage.getItem("buster-imported-theme");
-        if (raw) {
-          p = withSyntaxOverrides(importVSCodeTheme(JSON.parse(raw), fx), s.syntax_colors);
-          setStore("palette", p);
-          applyPaletteToCss(p);
-        } else {
-          p = withSyntaxOverrides({ ...CATPPUCCIN, ...fx }, s.syntax_colors);
-          setStore("palette", p);
-          clearCssOverrides();
-        }
-      } catch {
-        p = withSyntaxOverrides({ ...CATPPUCCIN, ...fx }, s.syntax_colors);
-        setStore("palette", p);
-        clearCssOverrides();
-      }
-    } else if (mode === "custom" && s.theme_hue >= 0) {
-      p = withSyntaxOverrides(generatePalette(s.theme_hue, fx), s.syntax_colors);
-      setStore("palette", p);
-      applyPaletteToCss(p);
-    } else if (mode === "light") {
-      p = withSyntaxOverrides({ ...LIGHT_THEME, ...fx }, s.syntax_colors);
-      setStore("palette", p);
-      applyPaletteToCss(p);
-    } else {
-      p = withSyntaxOverrides({ ...CATPPUCCIN, ...fx }, s.syntax_colors);
-      setStore("palette", p);
-      clearCssOverrides();
-    }
+    // A missing scheme (deleted, or the library not loaded yet) shows Dark without changing the setting.
+    const scheme = mode === "scheme" ? schemeColors(s.theme_scheme_id) : undefined;
+    const custom = mode === "custom" && s.theme_hue >= 0;
+    const p: ThemePalette = withSyntaxOverrides(
+      scheme ? paletteFromScheme(scheme, fx)
+        : custom ? generatePalette(s.theme_hue, fx)
+        : mode === "light" ? { ...LIGHT_THEME, ...fx }
+        : { ...CATPPUCCIN, ...fx },
+      s.syntax_colors,
+    );
+    // CSS variables first: canvas chrome repaints on the palette change and reads them.
+    if (scheme || custom || mode === "light") applyPaletteToCss(p);
+    else clearCssOverrides();
+    setStore("palette", p);
   }
 
   return { rebuildPalette };

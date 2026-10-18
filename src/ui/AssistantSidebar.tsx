@@ -4,6 +4,7 @@ import { assistantModels, cliName, effortsFor, formatElapsed, type AssistantEntr
 import { AI_PROVIDERS, providerName, type AiProvider } from "../lib/ai-oneshot";
 import { diffWordsWithSpace } from "diff";
 import ShaderPreview from "./ShaderPreview";
+import SchemePreview from "./SchemePreview";
 import "../styles/assistant.css";
 
 const CONNECTION = (cli: string) => ({
@@ -59,7 +60,7 @@ function EditPreview(props: { args: unknown }) {
 }
 
 export default function AssistantSidebar(props: { onClose: () => void }) {
-  const { assistant, store, backgrounds } = useBuster();
+  const { assistant, store, backgrounds, colorSchemes } = useBuster();
   const noteName = (args: unknown) => store.tabs.find(tab => tab.id === (args as EditArgs | null)?.tabId)?.name ?? "this note";
   const isEdit = (command: string) => command === "document edit";
   const state = assistant.state;
@@ -210,6 +211,21 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
               <Match when={e().command === "background update"}>
                 <div class="as-approval-title">Update the background <strong>{backgrounds.byId(noteArg(e().args, "id"))?.name ?? noteArg(e().args, "id")}</strong>?</div>
                 <ShaderPreview wgsl={noteArg(e().args, "wgsl")} />
+              </Match>
+              <Match when={e().command === "color scheme create"}>
+                <div class="as-approval-title">{(e().args as { apply?: boolean } | null)?.apply === false ? "Save" : "Create and use"} the color scheme <strong>{noteArg(e().args, "name")}</strong>?</div>
+                <SchemePreview colors={(e().args as { colors?: unknown } | null)?.colors} />
+              </Match>
+              <Match when={e().command === "color scheme update"}>
+                <div class="as-approval-title">Update the color scheme <strong>{colorSchemes.byId(noteArg(e().args, "id"))?.name ?? noteArg(e().args, "id")}</strong>?</div>
+                <SchemePreview colors={(e().args as { colors?: unknown } | null)?.colors} />
+              </Match>
+              <Match when={e().command === "color scheme apply" && colorSchemes.byId(noteArg(e().args, "id"))}>{scheme => <>
+                <div class="as-approval-title">Show the color scheme <strong>{scheme().name}</strong>?</div>
+                <SchemePreview colors={{ ...scheme().colors }} />
+              </>}</Match>
+              <Match when={e().command === "color scheme apply" && ["dark", "light"].includes(noteArg(e().args, "id"))}>
+                <div class="as-approval-title">Switch to the built-in <strong>{noteArg(e().args, "id") === "dark" ? "Dark" : "Light"}</strong> color scheme?</div>
               </Match>
               <Match when={e().command === "note rename"}>
                 <div class="as-approval-title">Rename <strong>{noteArg(e().args, "path")}</strong> to <strong>{noteArg(e().args, "name")}</strong>?</div>

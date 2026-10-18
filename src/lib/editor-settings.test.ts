@@ -15,6 +15,7 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     recent_folders: [],
     theme_mode: "dark",
     theme_hue: -1,
+    theme_scheme_id: "",
     effect_cursor_glow: 0,
     effect_vignette: 0,
     effect_grain: 0,

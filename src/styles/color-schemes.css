@@ -1,0 +1,22 @@
+/* Color scheme previews: the approval card in the Language Model sidebar (src/ui/SchemePreview.tsx). */
+
+.scheme-preview {
+  margin-top: 8px; padding: 12px 14px; border-radius: 6px;
+  font-family: var(--font-ui); font-size: 12px; line-height: 1.5;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+.scheme-preview-heading { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.scheme-preview-text { margin: 0 0 10px; }
+.scheme-preview-card { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 4px; margin-bottom: 10px; }
+.scheme-preview-swatches { display: flex; gap: 4px; }
+.scheme-preview-swatch {
+  flex: 1; height: 14px; border-radius: 3px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* Settings → Appearances gallery; cards share the background gallery's styles (backgrounds.css). */
+.scheme-gallery { margin-top: 12px; }
+.scheme-gallery .bg-grid { margin-top: 0; }
+.scheme-thumb { display: flex; flex-direction: column; justify-content: space-between; place-items: stretch; padding: 10px; }
+.scheme-thumb-text { font-family: var(--font-ui); font-size: 18px; font-weight: 600; }
+.scheme-gallery-describe { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

@@ -33,6 +33,11 @@ breadcrumbs. Sessions that contain those tabs skip them on restore. The canvas
 editor remains for plain-text files, without syntax colors or code
 intelligence.
 
+Color schemes differ too (October 17): the Mac app removed the VS Code theme
+**Import** button and adds schemes the Language Model makes from a description,
+checked for readability and saved to a gallery in Settings → Appearances
+(`growth/phases/color-schemes.md`). The Linux source still has Import.
+
 ## Develop and build
 
 Install Rust, Bun, and Xcode Command Line Tools, then run from the repository root:
