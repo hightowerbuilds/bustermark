@@ -2,6 +2,7 @@ import { For, Show, createSignal } from "solid-js";
 import { useBuster } from "../lib/buster-context";
 import { SCHEME_COLOR_KEYS, type ColorScheme } from "../lib/color-schemes";
 import type { AppSettings } from "../lib/ipc";
+import { openAssistantWithDraft } from "../lib/assistant-handoff";
 import GalleryCard from "./GalleryCard";
 import "../styles/backgrounds.css";
 import "../styles/color-schemes.css";
@@ -27,16 +28,7 @@ export default function ColorSchemeGallery(props: { settings: AppSettings; onCha
     if (shown() === id) props.onChange({ ...props.settings, theme_mode: "dark", theme_hue: -1, theme_scheme_id: "" });
   }
 
-  function describe() {
-    if (!assistant.state.draft.trim()) assistant.setDraft(DESCRIBE_SCHEME_DRAFT);
-    assistant.setOpen(true);
-    requestAnimationFrame(() => {
-      const input = document.querySelector<HTMLTextAreaElement>(".assistant-sidebar [data-assistant-input]");
-      if (!input) return;
-      input.focus({ preventScroll: true });
-      input.setSelectionRange(input.value.length, input.value.length);
-    });
-  }
+  const describe = () => openAssistantWithDraft(assistant, DESCRIBE_SCHEME_DRAFT, { keepExisting: true });
 
   const Card = (cardProps: { item: ColorScheme }) => {
     const colors = () => cardProps.item.colors;

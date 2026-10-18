@@ -9,11 +9,14 @@ export interface AssistantTool {
 
 export interface ToolTarget { command: string; effect: "read" | "write"; confirm: boolean }
 
-// Commands that drive human-facing panels (review, search portal, clipboard), change the app's look, or
-// duplicate tool schemas are left out so Claude sees a small, writing-focused tool set.
-// `note create` supersedes `document create` for Claude: it takes a name and initial text.
-const EXCLUDED = new Set(["commands list", "commands describe", "history list", "selection copy", "selection paste", "selection ai", "document create"]);
-const EXCLUDED_PREFIXES = ["review ", "search ", "appearance ", "effects ", "speech "];
+// Commands that drive human-facing panels (review, search portal, clipboard) or duplicate tool schemas
+// are left out so Claude sees a small, writing-focused tool set. `note create` supersedes
+// `document create` for Claude: it takes a name and initial text. Of the layout commands Claude gets
+// inspect, apply, reset, revert and preset apply; previews are a UI affordance, presets are the
+// writer's to save and delete, and effects stay with the writer (growth/phases/phase-3.md).
+const EXCLUDED = new Set(["commands list", "commands describe", "history list", "selection copy", "selection paste", "selection ai", "document create",
+  "appearance preview", "appearance preview cancel", "appearance presets save", "appearance presets delete"]);
+const EXCLUDED_PREFIXES = ["review ", "search ", "effects ", "speech "];
 export const isAssistantTool = (command: string) => !EXCLUDED.has(command) && !EXCLUDED_PREFIXES.some(prefix => command.startsWith(prefix));
 
 export function toolName(command: string): string {

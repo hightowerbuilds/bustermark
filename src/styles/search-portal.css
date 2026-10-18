@@ -22,3 +22,7 @@
 .search-portal-result-heading strong { overflow-wrap: anywhere; }
 .search-portal-results pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; padding: 8px; background: var(--bg-mantle); border-radius: 4px; }
 .search-portal-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Hand-offs to the Language Model sidebar. */
+.search-portal-handoff { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 12px; }
+.search-portal-handoff p { flex-basis: 100%; margin: 0; }

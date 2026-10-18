@@ -6,13 +6,15 @@ import { render } from "solid-js/web";
 import SettingsPanel from "./SettingsPanel";
 import { CATPPUCCIN } from "../lib/theme";
 import type { AppSettings } from "../lib/ipc";
+import { FeatureCommands } from "../lib/feature-commands";
+import { createWritingAppearance, registerWritingAppearanceCommands } from "../lib/writing-appearance";
 
 const sepia = { id: "scheme-1", name: "Sepia", prompt: "warm sepia", createdAt: 1, updatedAt: 1, colors: {
   background: "#f4ecd8", surface: "#e9dfc6", text: "#3a2e1f", textDim: "#5e4d36",
   textMuted: "#8a7a62", accent: "#9a4f1c", accent2: "#5b6e3a", selection: "rgba(154, 79, 28, 0.3)",
 } };
-const mock = vi.hoisted(() => ({ schemes: [] as unknown[], draft: "", setDraft: vi.fn(), setOpen: vi.fn(), remove: vi.fn(async () => {}) }));
-vi.mock("../lib/buster-context", () => ({ useBuster: () => ({ store: { palette: CATPPUCCIN }, backgrounds: {
+const mock = vi.hoisted(() => ({ schemes: [] as unknown[], draft: "", setDraft: vi.fn(), setOpen: vi.fn(), remove: vi.fn(async () => {}), layout: {} as Record<string, unknown> }));
+vi.mock("../lib/buster-context", () => ({ useBuster: () => ({ ...mock.layout, store: { palette: CATPPUCCIN, tabs: [] }, backgrounds: {
   state: { loaded: true, error: "", items: [], selected: null, strength: 0.35, animate: true },
   compile: vi.fn(), select: vi.fn(async () => {}), configure: vi.fn(async () => {}), remove: vi.fn(async () => {}),
 }, colorSchemes: {
@@ -20,6 +22,13 @@ vi.mock("../lib/buster-context", () => ({ useBuster: () => ({ store: { palette: 
   byId: (id: string) => (mock.schemes as { id: string }[]).find(item => item.id === id),
   rename: vi.fn(), remove: mock.remove,
 }, assistant: { state: { get draft() { return mock.draft; } }, setDraft: mock.setDraft, setOpen: mock.setOpen } }) }));
+function layout() {
+  const appearance = createWritingAppearance({ tabIds: () => [], load: () => null, save: () => {} });
+  const commands = new FeatureCommands();
+  registerWritingAppearanceCommands(commands, appearance);
+  return { appearance, commands };
+}
+mock.layout = layout();
 let dispose: (() => void) | undefined;
 afterEach(() => { dispose?.(); document.body.replaceChildren(); mock.schemes = []; mock.draft = ""; vi.clearAllMocks(); });
 function mount(overrides: Partial<AppSettings> = {}) {
@@ -38,7 +47,7 @@ describe("writing settings", () => {
     expect([...root.querySelectorAll("h2")].map(el => el.textContent)).toEqual(["Appearance", "Writing", "Backgrounds"]);
     let text = root.textContent!;
     for (const tab of root.querySelectorAll<HTMLButtonElement>('[role="tab"]')) { tab.click(); text += root.textContent; }
-    for (const label of ["Writing Style", "Text Size", "Backgrounds", "New Note", "Save As"]) expect(text).toContain(label);
+    for (const label of ["Writing Style", "Text Size", "Note layout", "Every note uses the default layout.", "Backgrounds", "New Note", "Save As"]) expect(text).toContain(label);
     for (const label of ["Shell Font", "Shell Program", "Shell History", "New Shell", "Shell Bell", "Minimap", "Line Numbers", "Tab Size", "Insert Spaces", "Format On Save", "Auto Save Delay", "Autocomplete", "Syntax Token Colors", "Language Overrides", "Cursor Glow", "Film Grain", "Vignette", "Blog Mode Theme", "go To Symbol", "next Problem"]) expect(text).not.toContain(label);
   });
   it("switches categories with arrow keys and shows only the selected content", () => {

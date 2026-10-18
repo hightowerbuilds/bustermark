@@ -5,6 +5,8 @@ import { AI_PROVIDERS, providerName, type AiProvider } from "../lib/ai-oneshot";
 import { diffWordsWithSpace } from "diff";
 import ShaderPreview from "./ShaderPreview";
 import SchemePreview from "./SchemePreview";
+import LayoutUndo from "./LayoutUndo";
+import { LAYOUT_APPROVAL_COMMANDS, UNDOABLE_LAYOUT_COMMANDS, describeLayoutApproval } from "../lib/appearance-approval";
 import "../styles/assistant.css";
 
 const CONNECTION = (cli: string) => ({
@@ -181,7 +183,7 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
         </div>
       }</Match>
       <Match when={entry.kind === "tool" && entry}>{e =>
-        <Show when={e().status === "awaiting"} fallback={
+        <Show when={e().status === "awaiting"} fallback={<>
           <details class={`as-tool as-tool-${e().status}`}>
             <summary><span class="as-tool-name">{e().command}</span><span class="as-tool-status">{TOOL_STATUS[e().status]}</span>
               {/* What a read returned went to the model: say so. */}
@@ -190,7 +192,13 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
             <Show when={isEdit(e().command)} fallback={<pre>{pretty(e().args)}</pre>}><EditPreview args={e().args} /></Show>
             <Show when={e().result}><pre>{prettyResult(e().result)}</pre></Show>
           </details>
-        }>
+          <Show when={e().images?.length}>
+            <div class="as-tool-images" aria-label={`Images sent to ${providerName(state.provider)}`}>
+              <For each={e().images}>{image => <img src={`data:${image.mimeType};base64,${image.data}`} alt="" loading="lazy" />}</For>
+            </div>
+          </Show>
+          <Show when={e().status === "done" && UNDOABLE_LAYOUT_COMMANDS.has(e().command)}><LayoutUndo result={e().result} /></Show>
+        </>}>
           <div class="as-approval" role="group" aria-label={`Approve ${e().command}`}>
             <Switch fallback={<>
               <div class="as-approval-title">Allow <span class="as-tool-name">{e().command}</span>?</div>
@@ -227,6 +235,11 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
               <Match when={e().command === "color scheme apply" && ["dark", "light"].includes(noteArg(e().args, "id"))}>
                 <div class="as-approval-title">Switch to the built-in <strong>{noteArg(e().args, "id") === "dark" ? "Dark" : "Light"}</strong> color scheme?</div>
               </Match>
+              <Match when={LAYOUT_APPROVAL_COMMANDS.has(e().command) && describeLayoutApproval(e().command, e().args as Record<string, unknown> | null,
+                id => store.tabs.find(tab => tab.id === id)?.name)}>{card => <>
+                <div class="as-approval-title">{card().title}</div>
+                <Show when={card().changes.length}><ul class="as-layout-changes"><For each={card().changes}>{change => <li>{change}</li>}</For></ul></Show>
+              </>}</Match>
               <Match when={e().command === "note rename"}>
                 <div class="as-approval-title">Rename <strong>{noteArg(e().args, "path")}</strong> to <strong>{noteArg(e().args, "name")}</strong>?</div>
               </Match>

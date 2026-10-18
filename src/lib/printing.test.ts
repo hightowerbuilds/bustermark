@@ -140,7 +140,7 @@ it("lets the model request printing, waits for the writer, and cancels a later r
     expect(model.state.entries.some(entry => entry.kind === "tool" && entry.status === "awaiting")).toBe(false);
     await vi.waitFor(() => expect(f.printing.state.loading).toBe(false)); await f.printing.confirm();
     await vi.waitFor(() => expect(reply).toHaveBeenCalledOnce());
-    expect(reply.mock.calls[0]).toEqual(["print-1", expect.stringContaining('"submitted"'), false]);
+    expect(reply.mock.calls[0]).toEqual(["print-1", expect.stringContaining('"submitted"'), false, []]);
     call({ callId: "print-2", name: "document_print", input: { tabId: "note" } });
     await vi.waitFor(() => expect(f.printing.state.document).not.toBeNull()); model.stop();
     await vi.waitFor(() => expect(f.printing.state.document).toBeNull());

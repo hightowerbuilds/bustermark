@@ -1,5 +1,6 @@
 import BackgroundGallery from "./BackgroundGallery";
 import ColorSchemeGallery from "./ColorSchemeGallery";
+import NoteLayoutSettings from "./NoteLayoutSettings";
 import { Component, For, Show, createSignal, createUniqueId } from "solid-js";
 import type { AppSettings } from "../lib/ipc";
 import { useBuster } from "../lib/buster-context";
@@ -16,7 +17,7 @@ interface SettingsPanelProps {
 
 type SettingsItem =
   | { id: string; type: "number"; key: keyof AppSettings; label: string; description: string; min: number; max: number; step: number }
-  | { id: string; type: "theme" | "blog_theme" | "spread_motion" };
+  | { id: string; type: "theme" | "blog_theme" | "spread_motion" | "note_layout" };
 
 const SETTINGS_TABS = ["Appearances", "Hotkeys"] as const;
 type SettingsTab = typeof SETTINGS_TABS[number];
@@ -29,6 +30,7 @@ const SETTINGS_SECTIONS: { title: string; description?: string; items: SettingsI
   { title: "Writing", description: "Markdown notes save automatically after you pause typing, wherever they are stored.", items: [
     { id: "blog_theme", type: "blog_theme" },
     { id: "spread_motion", type: "spread_motion" },
+    { id: "note_layout", type: "note_layout" },
     { id: "font_size", type: "number", key: "font_size", label: "Text Size", description: "Default text size for notes and shells; note appearance overrides can change it", min: 10, max: 32, step: 1 },
   ] },
 ];
@@ -189,6 +191,8 @@ const SettingsPanel: Component<SettingsPanelProps> = (props) => {
           </div>
         );
       }
+      case "note_layout":
+        return <NoteLayoutSettings />;
       case "blog_theme": {
         const current = () => writingStyle(props.settings.blog_theme);
         return (

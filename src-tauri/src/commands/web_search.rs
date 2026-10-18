@@ -1,4 +1,5 @@
-//! Bounded public web search. Keys stay in the native credential store.
+//! Bounded public web search: Brave when a key is saved (an official API), otherwise DuckDuckGo
+//! (`duckduckgo.rs`), which needs no key. Keys stay in the native credential store.
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -36,6 +37,15 @@ pub async fn web_search_save_key(api_key: String) -> Result<(), String> {
 
 #[derive(Debug, Serialize)]
 pub struct SearchResult { title: String, url: String, snippet: String }
+
+impl SearchResult {
+    pub(crate) fn new(title: String, url: String, snippet: String) -> Self {
+        Self { title: title.chars().take(300).collect(), url, snippet: snippet.chars().take(1500).collect() }
+    }
+    #[cfg(test)] pub(crate) fn title(&self) -> &str { &self.title }
+    #[cfg(test)] pub(crate) fn url(&self) -> &str { &self.url }
+    #[cfg(test)] pub(crate) fn snippet(&self) -> &str { &self.snippet }
+}
 #[derive(Debug, Serialize)]
 pub struct SearchResponse { query: String, provider: &'static str, results: Vec<SearchResult> }
 #[derive(Deserialize)]
@@ -90,11 +100,40 @@ pub async fn web_search(query: String, count: Option<u8>) -> Result<SearchRespon
     let count = count.unwrap_or(5);
     let query = validate(&query, count)?;
     let api_key = key().await?;
-    if api_key.is_empty() { return Err("Web search needs a Brave Search API key. Add it in AI Settings → Web search.".into()); }
+    if api_key.is_empty() {
+        let results = super::duckduckgo::web(&super::duckduckgo::client()?, query, count).await?;
+        return Ok(SearchResponse { query: query.into(), provider: "DuckDuckGo", results });
+    }
     let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).connect_timeout(Duration::from_secs(8))
         .redirect(reqwest::redirect::Policy::none()).build().map_err(|_| "Could not initialize web search.")?;
     let results = fetch(&client, "https://api.search.brave.com/res/v1/web/search", &api_key, query, count).await?;
     Ok(SearchResponse { query: query.into(), provider: "Brave Search", results })
+}
+
+#[derive(Debug, Serialize)]
+pub struct ImageSearchResponse {
+    query: String,
+    provider: &'static str,
+    results: Vec<super::duckduckgo::ImageResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<&'static str>,
+}
+
+/// Image search without a key: DuckDuckGo first; when it refuses (it challenges automated
+/// requests) or finds nothing, Wikimedia Commons, whose search API is official.
+#[tauri::command]
+pub async fn web_image_search(query: String, count: Option<u8>) -> Result<ImageSearchResponse, String> {
+    let count = count.unwrap_or(6);
+    let query = validate(&query, count)?;
+    let client = super::duckduckgo::client()?;
+    let refused = match super::duckduckgo::images(&client, query, count).await {
+        Ok(results) if !results.is_empty() => return Ok(ImageSearchResponse { query: query.into(), provider: "DuckDuckGo", results, note: None }),
+        Ok(_) => None,
+        Err(error) => Some(error),
+    };
+    let results = super::image_sources::commons(&client, query, count).await?;
+    Ok(ImageSearchResponse { query: query.into(), provider: "Wikimedia Commons", results,
+        note: refused.map(|_| "DuckDuckGo refused the image search, so these come from Wikimedia Commons (free images; few film stills). For other pictures, find a page with web search and use page images.") })
 }
 
 #[cfg(test)]

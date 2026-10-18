@@ -41,8 +41,9 @@ regardless of length.
 The Language Model sidebar runs Claude through your signed-in Claude Code
 subscription. It keeps multiple saved chats,
 searchable history, and per-chat drafts. Proposed document edits require approval
-and support undo. It can create shader backgrounds and search the web when a
-Brave Search key is configured. Writing actions (Rephrase in the right-click menu,
+and support undo. It can create shader backgrounds and color schemes, change a
+note's layout, search the web (DuckDuckGo, or Brave with a saved key), and look at
+pictures from the web or your Notes folder. Writing actions (Rephrase in the right-click menu,
 and selection-scoped AI review) run on your own AI command-line tool and
 subscription: Claude Code, Codex, or OpenCode. BusterMark stores no AI API keys
 and calls no local models. The integrated terminal has been retired, matching Linux.

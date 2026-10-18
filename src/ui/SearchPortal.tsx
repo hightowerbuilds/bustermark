@@ -1,9 +1,12 @@
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createEffect, createResource, createSignal } from "solid-js";
 import { useBuster } from "../lib/buster-context";
+import { noteSearchDraft, openAssistantWithDraft, webSearchDraft } from "../lib/assistant-handoff";
+import { webSearchConfigured } from "../lib/web-search";
 import "../styles/search-portal.css";
 
 export default function SearchPortal(props: { portalId: string }) {
-  const { search, commands, store } = useBuster();
+  const { search, commands, store, actions, assistant } = useBuster();
+  const [webReady] = createResource(() => webSearchConfigured().catch(() => false));
   const portal = () => search.portals[props.portalId];
   const [query, setQuery] = createSignal("");
   const [error, setError] = createSignal("");
@@ -23,7 +26,6 @@ export default function SearchPortal(props: { portalId: string }) {
     <section class="search-portal" aria-label="Search portal" aria-busy={busy()}>
       <header><h2>Search portal</h2><button disabled={busy()} onClick={() => void run("search portal close")}>Close</button></header>
       <p class="search-portal-scope"><strong>Open notes</strong> · Searches current text, including unsaved changes. Nothing leaves this app.</p>
-      <p class="search-portal-muted">Model and web search will arrive with the AI connection workflow.</p>
       <Show when={item().source}>
         <div class="search-portal-source"><span>Opened from {sourceName()}</span><button disabled={busy()} onClick={() => void run("search source")}>Return to source</button></div>
         <Show when={item().source?.text}><details><summary>Selected context · used only to fill the query</summary><blockquote>{item().source!.text}</blockquote></details></Show>
@@ -35,6 +37,13 @@ export default function SearchPortal(props: { portalId: string }) {
           <button type="submit" disabled={busy() || !query().trim()}>{busy() ? "Searching…" : "Search"}</button></div>
         <p class="search-portal-muted">Literal phrase, case insensitive, within a single line. Up to 100 matches. Open a note first to include it.</p>
       </form>
+      <div class="search-portal-handoff">
+        <button type="button" disabled={!query().trim()} onClick={() => openAssistantWithDraft(assistant, noteSearchDraft(query()))}>Ask the Language Model</button>
+        <Show when={webReady()} fallback={<button type="button" onClick={actions.createAiTab}>Set up web search</button>}>
+          <button type="button" disabled={!query().trim()} onClick={() => openAssistantWithDraft(assistant, webSearchDraft(query()))}>Search the web</button>
+        </Show>
+        <p class="search-portal-muted">These start a message with your phrase in the Language Model sidebar, which can also search closed notes. Nothing is sent until you send it.</p>
+      </div>
       <Show when={error()}><p class="search-portal-error" role="alert">{error()}</p></Show>
       <p role="status" class="search-portal-muted">{item().status === "ready" ? "Ready when you are. Opening this portal does not start a search." :
         `${item().results.length} ${item().results.length === 1 ? "match" : "matches"} in ${item().searchedNotes} searched ${item().searchedNotes === 1 ? "note" : "notes"}.`}</p>

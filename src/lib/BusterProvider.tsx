@@ -52,6 +52,7 @@ import { createBackgrounds, nativeBackgroundIpc } from "./backgrounds";
 import { registerBackgroundCommands } from "./background-commands";
 import { createColorSchemes, nativeColorSchemeIpc } from "./color-schemes";
 import { registerColorSchemeCommands } from "./color-scheme-commands";
+import { registerImageCommands } from "./image-commands";
 import { registerWebSearchCommands } from "./web-search";
 import { createClaudeCodeTransport } from "./assistant-transport";
 import { isMarkdownPath } from "../editor/writing-viewport";
@@ -267,7 +268,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
     hasTab: id => store.tabs.some(tab => tab.id === id),
     openPanel: id => batch(() => {
       const tabId = `search_${id}`;
-      setStore("tabs", tabs => [...tabs, { id: tabId, name: "AI search", path: id, type: "search-portal", dirty: false }]);
+      setStore("tabs", tabs => [...tabs, { id: tabId, name: "Search", path: id, type: "search-portal", dirty: false }]);
       actions.switchToTab(tabId);
       return tabId;
     }),
@@ -302,6 +303,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
   registerBackgroundCommands(commands, backgrounds);
   registerColorSchemeCommands(commands, colorSchemes, { settings: () => store.settings, update: actions.updateSettings, palette: () => store.palette });
   registerWebSearchCommands(commands);
+  registerImageCommands(commands);
   const printing = createPrinting({
     tabs: () => store.tabs,
     text: id => engines.get(id)?.getText() ?? store.fileTexts[id],

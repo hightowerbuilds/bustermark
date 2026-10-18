@@ -38,12 +38,15 @@ export type SessionEvent =
 
 export interface ToolCall { callId: string; name: string; input: Record<string, unknown> | null; toolUseId?: string | null }
 
+/** An image a tool result hands the model (base64, already shrunk). */
+export interface ToolImage { mimeType: string; data: string }
+
 export interface AssistantTransport {
   status(provider?: AiProvider): Promise<CliStatus>;
   send(request: SendRequest): Promise<void>;
   interrupt(): Promise<void>;
   reset(): Promise<void>;
-  toolResult(callId: string, content: string, isError: boolean): Promise<void>;
+  toolResult(callId: string, content: string, isError: boolean, images?: ToolImage[]): Promise<void>;
   subscribe(onEvent: (event: SessionEvent) => void, onToolCall: (call: ToolCall) => void): Promise<() => void>;
 }
 
@@ -55,7 +58,7 @@ export const createClaudeCodeTransport = (conversationId = "default"): Assistant
   send: request => invoke("assistant_send", { request: { ...request, conversationId, channelId } }),
   interrupt: () => invoke("assistant_interrupt", { conversationId }),
   reset,
-  toolResult: (callId, content, isError) => invoke("assistant_tool_result", { conversationId, callId, content, isError }),
+  toolResult: (callId, content, isError, images) => invoke("assistant_tool_result", { conversationId, callId, content, isError, images: images ?? [] }),
   async subscribe(onEvent, onToolCall) {
     const stops = await Promise.all([
       listen<SessionEvent & { conversationId?: string; channelId?: string }>("assistant-event", ({ payload }) => {

@@ -7,6 +7,9 @@ export interface WebSearchResult {
   results: Array<{ title: string; url: string; snippet: string }>;
 }
 
+/** Whether a Brave Search key is saved in the Keychain. */
+export const webSearchConfigured = () => invoke<boolean>("web_search_configured");
+
 export function registerWebSearchCommands(
   commands: FeatureCommands,
   search = (query: string, count: number) => invoke<WebSearchResult>("web_search", { query, count }),

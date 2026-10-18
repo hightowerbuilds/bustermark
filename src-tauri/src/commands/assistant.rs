@@ -119,6 +119,39 @@ fn conversation(state: &AssistantState, id: Option<&str>) -> Result<Arc<Shared>,
 struct ToolReply {
     content: String,
     is_error: bool,
+    images: Vec<ToolImage>,
+}
+
+/// An image a tool hands the model, already shrunk by the frontend (see `image view`).
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ToolImage {
+    mime_type: String,
+    data: String,
+}
+
+const MAX_TOOL_IMAGES: usize = 8;
+const MAX_TOOL_IMAGE_BASE64: usize = 6 * 1024 * 1024;
+
+fn check_images(images: &[ToolImage]) -> Result<(), String> {
+    if images.len() > MAX_TOOL_IMAGES { return Err(format!("A tool result can carry at most {MAX_TOOL_IMAGES} images.")); }
+    for image in images {
+        if !matches!(image.mime_type.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp") {
+            return Err("Tool images must be PNG, JPEG, GIF, or WebP.".into());
+        }
+        if image.data.is_empty() || image.data.len() > MAX_TOOL_IMAGE_BASE64
+            || !image.data.bytes().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'/' | b'=')) {
+            return Err("A tool image must be base64 data of at most 6 MB.".into());
+        }
+    }
+    Ok(())
+}
+
+/// MCP `tools/call` content: the text, then any images as image blocks.
+fn tool_content(reply: &ToolReply) -> Value {
+    let mut content = vec![json!({"type": "text", "text": reply.content})];
+    content.extend(reply.images.iter().map(|image| json!({"type": "image", "data": image.data, "mimeType": image.mime_type})));
+    json!({"content": content, "isError": reply.is_error})
 }
 
 fn valid_model(model: &str) -> bool {
@@ -536,10 +569,12 @@ pub async fn assistant_reset(state: State<'_, AssistantState>, conversation_id: 
 }
 
 #[command]
-pub fn assistant_tool_result(state: State<'_, AssistantState>, conversation_id: Option<String>, call_id: String, content: String, is_error: bool) -> Result<(), String> {
+pub fn assistant_tool_result(state: State<'_, AssistantState>, conversation_id: Option<String>, call_id: String, content: String, is_error: bool, images: Option<Vec<ToolImage>>) -> Result<(), String> {
+    let images = images.unwrap_or_default();
+    check_images(&images)?;
     let shared = conversation(&state, conversation_id.as_deref())?;
     let sender = shared.pending.lock().map_err(|_| "Assistant state unavailable")?.remove(&call_id);
-    sender.ok_or("That tool call is no longer waiting")?.send(ToolReply { content, is_error })
+    sender.ok_or("That tool call is no longer waiting")?.send(ToolReply { content, is_error, images })
         .map_err(|_| "Claude Code stopped waiting for that tool call".into())
 }
 
@@ -558,7 +593,7 @@ fn stop_session(shared: &Shared, session: Option<Session>) {
 fn fail_pending(shared: &Shared) {
     if let Ok(mut pending) = shared.pending.lock() {
         for (_, sender) in pending.drain() {
-            let _ = sender.send(ToolReply { content: "Cancelled by the user before this ran.".into(), is_error: true });
+            let _ = sender.send(ToolReply { content: "Cancelled by the user before this ran.".into(), is_error: true, images: Vec::new() });
         }
     }
 }
@@ -688,9 +723,9 @@ async fn handle_rpc(app: &AppHandle, shared: &Arc<Shared>, message: &Value) -> O
             if let Ok(mut pending) = shared.pending.lock() { pending.remove(&call_id); }
             let reply_value = match result {
                 Ok(Ok(r)) => r,
-                _ => ToolReply { content: "The tool call was cancelled or timed out.".into(), is_error: true },
+                _ => ToolReply { content: "The tool call was cancelled or timed out.".into(), is_error: true, images: Vec::new() },
             };
-            reply(json!({"content": [{"type": "text", "text": reply_value.content}], "isError": reply_value.is_error}))
+            reply(tool_content(&reply_value))
         }
         _ => error(-32601, "Method not found"),
     })
@@ -699,6 +734,19 @@ async fn handle_rpc(app: &AppHandle, shared: &Arc<Shared>, message: &Value) -> O
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tool_results_carry_checked_images_after_the_text() {
+        let image = ToolImage { mime_type: "image/jpeg".into(), data: "/9j/4AAQ".into() };
+        let reply = ToolReply { content: "1 image attached".into(), is_error: false, images: vec![image.clone()] };
+        assert_eq!(tool_content(&reply), json!({"content": [
+            {"type": "text", "text": "1 image attached"}, {"type": "image", "data": "/9j/4AAQ", "mimeType": "image/jpeg"},
+        ], "isError": false}));
+        assert!(check_images(&[image.clone()]).is_ok());
+        assert!(check_images(&[ToolImage { mime_type: "image/svg+xml".into(), ..image.clone() }]).is_err());
+        assert!(check_images(&[ToolImage { data: "not base64!".into(), ..image.clone() }]).is_err());
+        assert!(check_images(&vec![image; MAX_TOOL_IMAGES + 1]).is_err());
+    }
 
     fn request() -> SendRequest {
         SendRequest { conversation_id: None, channel_id: None, text: "Hi".into(), model: Some("claude-opus-5".into()), effort: Some("high".into()), system: "Be brief.".into(), tools: vec![], resume: None, provider: None }

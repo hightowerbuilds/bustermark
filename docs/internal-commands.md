@@ -213,10 +213,13 @@ terminals, utility tabs, and non-Markdown files.
 
 ## Local search portal
 
-`search portal open` opens a search tab; the writing toolbar no longer has an
-AI search button, so the command line and the Assistant are the entry points.
-Its initial scope is **open notes**, including unsaved engine text; it makes no
-network requests.
+`search portal open` opens a **Search** tab from the command line. The `search *`
+commands are withheld from the Language Model, which finds phrases with
+`notes search`, `note open`, and `selection set` instead. The portal's scope is
+**open notes**, including unsaved engine text; it makes no network requests.
+**Ask the Language Model** and **Search the web** (with a saved Brave key; otherwise
+**Set up web search**) start a message with the query in the sidebar. Nothing is
+sent until the writer sends it.
 Selecting a passage only seeds an editable query. Opening never submits it.
 
 ```text
@@ -245,7 +248,11 @@ and web search follow the Claude/Codex connection milestone.
 
 ## Writing appearance, previews, presets, and effects
 
-**Writing appearance** controls and commands share the same service. App defaults
+**Writing appearance** is set through these commands: from the command line, or by
+the Language Model, which asks for approval in plain words ("Change the layout of
+Mercury.md?") and offers **Undo** under each allowed change. Settings › Writing ›
+**Note layout** lists the notes, folder, or defaults with their own layout, each with
+**Reset**. There is no separate appearance dialog. App defaults
 persist locally. Workspace overrides persist by workspace path. Tab overrides
 last the session and win over workspace, then app defaults. Unmodified fields
 inherit future changes. Obtain the workspace ID from capabilities or workspace
@@ -304,17 +311,22 @@ vignette strength. Selection and speech highlights remain separate overlays.
 One preview can be active. It is not saved or added to appearance history; updating
 it requires its `previewId`. Cancel restores committed values. Apply with an
 explicit patch commits and clears the preview; reset, revert, preset mutations,
-and Stop effects also end it. Closing the appearance dialog cancels its own
-preview. UI drafts reject stale revisions rather than overwriting newer changes.
+and Stop effects also end it. Every write rejects a stale revision
+(`STALE_APPEARANCE`) rather than overwriting a newer change.
 
 Quiet, Reading room, and Night focus are built-in presets. Up to 30 named custom
 appearances persist locally; saving an existing custom name replaces it. Saving
-captures effective applied/previewed values, not unsubmitted dialog fields.
+captures effective applied/previewed values.
 App reset restores factory defaults; workspace/tab reset removes that scope's
 overrides. Other scopes and presets remain intact. Revert restores one of the
 last 20 committed appearance changes, separate from document undo. Stop effects
 clears effects and motion across all stored scopes and ends a preview. It can be
 reverted explicitly. These operations never edit note text.
+
+The Language Model gets `appearance capabilities`, `inspect`, `apply`, `reset`,
+`revert`, `presets list`, and `presets apply`. It changes the current note
+(`scope: "tab"`, from `app status`'s active tab) unless the writer asks for every
+note. Previews, saving and deleting presets, and `effects *` stay with the writer.
 
 ## In-app AI entry point
 
@@ -427,7 +439,10 @@ retaining the source note and captured revision.
 Lookup uses active macOS dictionaries offline, for single-line queries up to 256
 Unicode characters. An absent definition provides dictionary setup guidance.
 
-Opening AI review does not send a request. These commands operate its lifecycle:
+Opening AI review does not send a request. **Discuss in chat** starts a message in
+the Language Model sidebar quoting the passage and any result (each trimmed to
+1,500 characters); nothing is sent until the writer sends it. These commands
+operate its lifecycle:
 
 ```text
 review generate {"reviewId":"<ID>","provider":"claude","instruction":"Rewrite clearly. Return only the revised passage."}
@@ -575,8 +590,22 @@ not imported. See the [verification log](../growth/build-log/2026-09-27-chat-his
 
 ## Web search
 
-`web search {"query":"Markdown specification","count":5}` is a read-only command exposed as `web_search` to Claude and tool-capable local chat models. It returns up to 10 titles, source URLs, and snippets from Brave Search. It does not fetch full pages. Queries are limited to 500 characters and 75 words.
+`web search {"query":"Markdown specification","count":5}` is a read-only command exposed as `web_search` to the Language Model. It returns up to 10 titles, source URLs, and snippets. It does not fetch full pages. Queries are limited to 500 characters and 75 words.
 
-Set a Brave Search API key in **AI Settings → Web search**. The key is stored separately in the OS keyring, never in chat history or settings JSON. Search terms are sent to Brave; provider charges/quotas apply. Missing credentials, network errors, invalid responses, and rate limits are reported as tool failures. Returned links are limited to HTTP(S); source text is untrusted evidence. The assistant is instructed to cite URLs and not claim it read full articles.
+With no setup it uses DuckDuckGo: DuckDuckGo has no official search API, so BusterMark reads its HTML results page (`html.duckduckgo.com/html/`) as a browser does (`src-tauri/src/commands/duckduckgo.rs`). It can change or refuse without notice; a refusal is reported plainly. Saving a Brave Search API key in **AI Settings → Web search** switches web search to Brave, an official API (the key stays in the OS keyring, never in chat history or settings; Brave's charges and quotas apply; https://api-dashboard.search.brave.com/app/documentation/web-search). Returned links are limited to HTTP(S); source text is untrusted evidence. The assistant is instructed to cite URLs and not claim it read full articles.
 
-Provider contract: https://api-dashboard.search.brave.com/app/documentation/web-search
+## Images for the Language Model
+
+The Language Model can look at pictures (`growth/phases/image-viewing.md`). All three are read-only and need no approval; the chat row shows thumbnails of what was sent.
+
+```text
+image view {"url":"https://upload.wikimedia.org/…/Starry_Night.jpg"}
+image view {"path":"/Users/me/Notes/set.jpg"}
+web images {"query":"Starry Night Van Gogh","count":4}
+page images {"url":"https://en.wikipedia.org/wiki/Blade_Runner"}
+```
+
+- `image view` attaches one image, shrunk to at most 1568 px. A command result's `attachments: [{mimeType, data}]` travels to the model as MCP image blocks beside the text (`assistant_tool_result` checks type and size); saved chats keep only the note "attachedImages".
+- `web images` searches DuckDuckGo's image endpoint and, when DuckDuckGo refuses (it challenges automated requests) or finds nothing, Wikimedia Commons' official search API. It attaches up to six 400 px thumbnails.
+- `page images` lists a page's `og:image`/`twitter:image` and larger `<img>` pictures (SVG, tiny, and `data:` images skipped), for pages found with web search.
+- **Network rules** (`src-tauri/src/commands/images.rs`), for every address the model chooses: http and https only, no user name or password; the host is resolved and refused if any address is loopback, private, link-local, carrier-grade NAT, multicast, or reserved (IPv4-mapped and NAT64 IPv6 included), and the connection is pinned to the checked address with proxies off; up to three redirects, each checked again; 20-second timeout. Images: at most 8 MB, PNG, JPEG, GIF, or WebP by their bytes. Pages: at most 3 MB of HTML. Local images must be inside the Notes folder or the open workspace.

@@ -660,3 +660,8 @@
   overflow: hidden;
 }
 .settings-section-description { margin: 0 0 18px; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+
+/* Settings › Writing › Note layout */
+.settings-note-layout { flex-wrap: wrap; }
+.settings-note-layout-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.settings-note-layout-list li { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; }

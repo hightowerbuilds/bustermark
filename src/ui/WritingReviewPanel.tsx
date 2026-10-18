@@ -1,10 +1,11 @@
 import { Show, createSignal } from "solid-js";
 import { useBuster } from "../lib/buster-context";
 import { isAiProvider, providerName as nameOf } from "../lib/ai-oneshot";
+import { openAssistantWithDraft, reviewDiscussionDraft } from "../lib/assistant-handoff";
 import "../styles/writing-review.css";
 
 export default function WritingReviewPanel(props: { reviewId: string }) {
-  const { store, actions, commands, writing } = useBuster();
+  const { store, actions, commands, writing, assistant } = useBuster();
   const review = () => writing.reviews[props.reviewId];
   const [instruction, setInstruction] = createSignal("Rewrite this passage for clarity while preserving its meaning and voice. Return only the revised passage.");
   const [error, setError] = createSignal("");
@@ -23,6 +24,12 @@ export default function WritingReviewPanel(props: { reviewId: string }) {
       if (!result.ok) setError(result.error.message);
     } finally { setBusy(false); }
   }
+  const discuss = () => {
+    const item = review();
+    if (!item) return;
+    openAssistantWithDraft(assistant, reviewDiscussionDraft({ noteName: sourceName(), passage: item.target.text,
+      instruction: item.output ? instruction() : undefined, output: item.output || undefined }));
+  };
   const preset = (value: string) => {
     const instructions: Record<string, string> = {
       rewrite: "Rewrite this passage for clarity while preserving its meaning and voice. Return only the revised passage.",
@@ -39,7 +46,10 @@ export default function WritingReviewPanel(props: { reviewId: string }) {
       <p class="writing-review-meta">From {sourceName()} · line {item().target.range.anchor.line + 1}</p>
       <label>Selected passage</label>
       <blockquote>{item().target.text}</blockquote>
-      <button onClick={() => void run("review source")} disabled={busy()}>Return to source</button>
+      <div class="writing-review-buttons">
+        <button onClick={() => void run("review source")} disabled={busy()}>Return to source</button>
+        <Show when={item().kind === "ai"}><button onClick={discuss} title="Start a message in the Language Model sidebar quoting this passage and any result; nothing is sent until you send it">Discuss in chat</button></Show>
+      </div>
       <Show when={item().kind === "ai"}>
         <div class="writing-review-provider"><span>Request provider: <strong>{providerName()}</strong></span>
           <button disabled={running()} onClick={actions.createAiTab}>AI settings</button></div>

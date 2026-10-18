@@ -22,13 +22,15 @@ function fakeClaudeCode(status: CliStatus = signedIn) {
   let onEvent: (event: SessionEvent) => void = () => {};
   let onToolCall: (call: ToolCall) => void = () => {};
   const sent: SendRequest[] = [];
-  const replies: Array<{ callId: string; content: string; isError: boolean }> = [];
+  const replies: Array<{ callId: string; content: string; isError: boolean; images?: unknown[] }> = [];
   const transport: AssistantTransport = {
     status: vi.fn(async () => status),
     send: vi.fn(async (request: SendRequest) => { sent.push(structuredClone(request)); }),
     interrupt: vi.fn(async () => {}),
     reset: vi.fn(async () => {}),
-    toolResult: vi.fn(async (callId: string, content: string, isError: boolean) => { replies.push({ callId, content, isError }); }),
+    toolResult: vi.fn(async (callId: string, content: string, isError: boolean, images?: unknown[]) => {
+      replies.push(images?.length ? { callId, content, isError, images } : { callId, content, isError });
+    }),
     subscribe: async (event, call) => { onEvent = event; onToolCall = call; return () => {}; },
   };
   return { transport, sent, replies, emit: (event: SessionEvent) => onEvent(event), call: (call: ToolCall) => onToolCall(call) };
@@ -49,11 +51,13 @@ describe("assistant tools", () => {
     expect(toolName("appearance presets apply")).toBe("appearance_presets_apply");
   });
 
-  it("leaves panel-driving, clipboard and appearance commands out of Claude's tools", () => {
-    for (const name of ["selection copy", "selection paste", "selection ai", "review apply", "search query", "appearance apply", "effects set", "history list"]) {
+  it("leaves panel-driving, clipboard, preview, preset-management and effect commands out of Claude's tools", () => {
+    for (const name of ["selection copy", "selection paste", "selection ai", "review apply", "search query", "effects set", "effects stop", "history list",
+      "appearance preview", "appearance preview cancel", "appearance presets save", "appearance presets delete"]) {
       expect(isAssistantTool(name)).toBe(false);
     }
-    for (const name of ["document read", "document edit", "selection set", "format bold", "tab focus", "terminal create"]) {
+    for (const name of ["document read", "document edit", "selection set", "format bold", "tab focus", "terminal create",
+      "appearance capabilities", "appearance inspect", "appearance apply", "appearance reset", "appearance revert", "appearance presets list", "appearance presets apply"]) {
       expect(isAssistantTool(name)).toBe(true);
     }
   });
@@ -92,6 +96,22 @@ describe("assistant through Claude Code", () => {
     await vi.waitFor(() => expect(cc.replies).toHaveLength(1));
     expect(cc.replies[0]).toEqual({ callId: "call-1", content: JSON.stringify({ documents: [{ tabId: "file_1" }] }), isError: false });
     expect(assistant.state.entries.find(e => e.kind === "tool")).toMatchObject({ command: "document list", status: "done" });
+  });
+
+  it("sends a result's image attachments to the model as images, and keeps them out of saved chats", async () => {
+    const { commands } = catalog();
+    const image = { mimeType: "image/jpeg", data: "/9j/4AAQ" };
+    commands.register({ name: "image view", description: "View.", version: 1, effect: "read", inputSchema: emptyArgs, outputSchema: objectResult,
+      examples: [], run: () => ({ source: "https://example.org/a.jpg", width: 640, height: 480, attachments: [image, { bad: true }] }) });
+    const cc = fakeClaudeCode();
+    const assistant = createAssistant({ commands, transport: cc.transport });
+    await assistant.send("Look");
+    cc.call({ callId: "call-1", name: "image_view", input: {} });
+    await vi.waitFor(() => expect(cc.replies).toHaveLength(1));
+    expect(cc.replies[0]).toEqual({ callId: "call-1", isError: false, images: [image],
+      content: JSON.stringify({ source: "https://example.org/a.jpg", width: 640, height: 480, attachedImages: 1 }) });
+    expect(assistant.state.entries.find(e => e.kind === "tool")).toMatchObject({ status: "done", images: [image] });
+    expect(JSON.stringify(assistant.snapshot())).not.toContain("/9j/4AAQ");
   });
 
   it("waits for approval before a write tool, and reports a denial", async () => {
@@ -219,6 +239,18 @@ describe("assistant through Claude Code", () => {
     expect(assistant.state.running).toBe(false);
     const notices = assistant.state.entries.filter(e => e.kind === "notice").map(e => e.kind === "notice" && e.text);
     expect(notices).toEqual(["Overloaded", "Your Claude usage limit has been reached.", "Claude Code stopped: boom"]);
+  });
+
+  it("shows a usage warning as a single note, not as the limit being reached", async () => {
+    const cc = fakeClaudeCode();
+    const a = createAssistant({ commands: catalog().commands, transport: cc.transport });
+    await a.send("hi");
+    cc.emit({ kind: "rate_limit", info: { status: "allowed_warning", resetsAt: 1_790_000_000 } });
+    cc.emit({ kind: "rate_limit", info: { status: "allowed_warning", resetsAt: 1_790_000_000 } });
+    const notices = a.state.entries.filter(e => e.kind === "notice");
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({ tone: "info" });
+    expect((notices[0] as { text: string }).text).toMatch(/^You're close to your Claude usage limit\. It resets at /);
   });
 
   it("surfaces send failures and rechecks the connection", async () => {

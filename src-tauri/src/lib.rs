@@ -245,6 +245,7 @@ pub fn run() {
             commands::ai_cli::ai_oneshot_cancel,
             commands::ai_cli::ai_providers_status,
             commands::web_search::web_search,
+            commands::web_search::web_image_search,
             commands::web_search::web_search_configured,
             commands::web_search::web_search_save_key,
             commands::chat_history::chat_history_load,
@@ -261,6 +262,9 @@ pub fn run() {
             commands::color_schemes::color_schemes_load,
             commands::color_schemes::color_scheme_save,
             commands::color_schemes::color_scheme_delete,
+            commands::images::image_fetch,
+            commands::images::image_read,
+            commands::image_sources::page_images,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

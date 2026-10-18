@@ -13,7 +13,7 @@ it("saves keys only through native credential storage and reports failures", asy
   document.body.append(root);
   const dispose = render(() => createComponent(WebSearchSettings, {}), root);
   try {
-    await vi.waitFor(() => expect(root.textContent).toContain("No search key saved"));
+    await vi.waitFor(() => expect(root.textContent).toContain("No Brave key saved: web search uses DuckDuckGo."));
     const input = root.querySelector("input")!;
     expect(input.type).toBe("password");
     input.value = "test-key"; input.dispatchEvent(new Event("input", { bubbles: true }));
