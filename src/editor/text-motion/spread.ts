@@ -1,6 +1,8 @@
 /**
  * Spread — parts a note's text around a word and holds an opening there.
  *
+ * A temporary decoration enlarges a single target word by 2px before measuring
+ * the page, so its neighbours make room. It never changes the document.
  * The ProseMirror DOM is never rearranged. Opening the spread:
  *   1. measures each word of the target paragraph, and of the paragraphs just
  *      below it on screen, where the browser drew it (the origins), so the
@@ -454,7 +456,16 @@ export function openSpread(options: SpreadOptions): SpreadHandle {
   const profile = PROFILES[options.motion === "off" ? "calm" : options.motion];
   const still = options.motion === "off";
 
-  let scene = measureScene(options);
+  const originalDoc = view.state.doc;
+  const targetText = originalDoc.textBetween(options.from, options.to, "", " ");
+  const emphasis = targetText && !/\s/u.test(targetText)
+    ? Decoration.inline(options.from, options.to, { class: "text-motion-target" }) : null;
+  // Measure the enlarged word in the real paragraph first. The layer and
+  // Define then inherit its font and exact positions, including inline marks.
+  if (emphasis) options.setDecorations(DecorationSet.create(originalDoc, [emphasis]));
+  let scene: Scene;
+  try { scene = measureScene(options); }
+  catch (error) { options.setDecorations(DecorationSet.empty); throw error; }
   const layer = document.createElement("div");
   layer.className = "text-motion-layer";
   layer.setAttribute("aria-hidden", "true");
@@ -587,6 +598,8 @@ export function openSpread(options: SpreadOptions): SpreadHandle {
     const next = lastBlock?.nextElementSibling;
     collapsedMargin = lastBlock ? Math.min(px(getComputedStyle(lastBlock).marginBottom), next ? px(getComputedStyle(next).marginTop) : 0) : 0;
     const decorations = [Decoration.widget(last.pos + last.node.nodeSize, spacer, { side: -1, ignoreSelection: true, key: "text-motion-spacer" })];
+    // Edits invalidate the captured range; the edited text lands at its normal size.
+    if (emphasis && doc === originalDoc) decorations.push(emphasis);
     if (reflowed) for (const item of found) decorations.push(Decoration.node(item!.pos, item!.pos + item!.node.nodeSize, { class: "text-motion-ghost" }));
     return DecorationSet.create(doc, decorations);
   }
@@ -716,9 +729,11 @@ export function openSpread(options: SpreadOptions): SpreadHandle {
     cancelAnimationFrame(frame);
     disposeOpening();
     for (const unit of units) if (!unit.word) unit.el.style.transform = "";
-    // Reveal the real text first; drop the identical layer on the next frame.
+    // Removing emphasis restores the ordinary font and layout, so remove its
+    // layer in the same frame rather than showing two different text layouts.
     options.setDecorations(DecorationSet.empty, render);
-    if (immediate) { layer.remove(); options.onClosed(); return; }
+    if (immediate || emphasis) { layer.remove(); options.onClosed(); return; }
+    // Without emphasis the layer is identical to the page; remove it next frame.
     requestAnimationFrame(() => { layer.remove(); options.onClosed(); });
   }
 

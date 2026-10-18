@@ -2,7 +2,7 @@
  * Courier writing style: text drawn in ASCII characters.
  *
  * Two kinds of art, one renderer:
- * - **Drop caps.** Every paragraph opens on a large first letter: the art
+ * - **Drop caps.** Substantial paragraphs open on a large first letter: the art
  *   floats at the start of the paragraph, sized to the letter, and the real
  *   letter stays in the text, transparent and practically zero-width (an inline
  *   decoration). No `::first-letter` styling: in WebKit any `::first-letter`
@@ -28,6 +28,7 @@
 import { Decoration } from "prosemirror-view";
 import type { Node as ProseNode } from "prosemirror-model";
 import { canvasMeasure } from "./text-motion/flow";
+import { graphemes } from "./text-motion/letters";
 
 /** Light to dense. Index 0 is an empty cell. */
 export const RAMP = " .:-=+*#%@";
@@ -42,10 +43,19 @@ const SUPERSAMPLE = 4;
 /** Character rows per drop cap, and per line of a heading's font size. */
 const CAP_ROWS = 12;
 const HEADING_ROWS_PER_EM = 11;
+/** Short fragments (page numbers, labels, signatures) keep ordinary text. */
+const MIN_DROP_CAP_CHARACTERS = 40;
 
 /** The text `::first-letter` selects: leading punctuation and the first letter or digit. */
 export function capLetter(text: string): string | null {
   return text.match(/^\s*(\p{P}*[\p{L}\p{N}])/u)?.[1] ?? null;
+}
+
+function paragraphCapLetter(node: ProseNode): string | null {
+  // Count rendered text, not Markdown syntax or whitespace padding. Inline
+  // breaks separate words; a grapheme counts as one character, even with accents.
+  const text = node.textBetween(0, node.content.size, "", " ").replace(/\s+/gu, " ").trim();
+  return graphemes(text).length >= MIN_DROP_CAP_CHARACTERS ? capLetter(node.textContent) : null;
 }
 
 /** Ink coverage of a mask, one ramp index per cell (0 = empty). */
@@ -364,11 +374,12 @@ function createArt(kind: ArtKind, letter: string, assemble: boolean): HTMLElemen
 const built = new WeakMap<Set<string>, { doc: ProseNode; decorations: Decoration[] }>();
 
 /**
- * Widgets for the Courier style: a drop cap at the start of each paragraph
- * that opens on a letter or digit, and the art for each Heading 1 and 2.
+ * Widgets for the Courier style: a drop cap for paragraphs with at least
+ * MIN_DROP_CAP_CHARACTERS visible characters that open on a letter or digit,
+ * and the art for each Heading 1 and 2 regardless of length.
  * `seen` holds every block already shown in this editor; a block not seen
  * before assembles when its widget is drawn. Decisions are made once per
- * document (ProseMirror may ask more than once), and every current block
+ * document (ProseMirror may ask more than once), and every eligible block
  * counts as seen afterwards, so recreated widgets (undo, an assistant edit)
  * appear settled. Callers must pass DecorationSet.create a copy: it nulls the
  * entries of the array it is given.
@@ -379,7 +390,7 @@ export function asciiArtDecorations(doc: ProseNode, seen: Set<string>): Decorati
   const decorations: Decoration[] = [];
   doc.forEach((node, offset) => {
     const heading = node.type.name === "heading" && (node.attrs.level === 1 || node.attrs.level === 2);
-    const letter = node.type.name === "paragraph" ? capLetter(node.textContent) : null;
+    const letter = node.type.name === "paragraph" ? paragraphCapLetter(node) : null;
     if (!heading && !letter) return;
     const fingerprint = `${heading ? `h${node.attrs.level}` : "p"}:${node.textContent.slice(0, 80)}`;
     const assemble = !seen.has(fingerprint);

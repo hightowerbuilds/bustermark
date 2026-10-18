@@ -71,6 +71,8 @@ it loses focus, clipboard writes fail and animation frames pause, so steps fail
 at random. Run it before an important commit while away from the Mac. For a
 quick check of the Courier writing style (drop caps and ASCII headings), stage
 with `--only courier`, which runs just that section in about twenty seconds.
+`--only emphasis` checks the clicked word's 2px increase, restoration on close,
+formatting, phrase selections, and the hard-break fallback without model requests.
 `--only polish` runs keyboard entry, neighbouring paragraphs, Keep as note,
 landing after Bold, resizing, printing, Spread Motion, and Spelling (one live
 Claude Haiku request) in about forty seconds.

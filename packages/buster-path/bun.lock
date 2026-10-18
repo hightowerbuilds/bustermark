@@ -6,11 +6,9 @@
       "name": "buster-path",
       "devDependencies": {
         "@types/bun": "latest",
+        "typescript": "^5",
         "vite": "^8.0.8",
         "vite-plugin-dts": "^4.5.4",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
       },
     },
   },

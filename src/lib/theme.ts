@@ -168,7 +168,7 @@ export function generatePalette(hue: number, fx: ThemeEffects): ThemePalette {
     cursorAlt:       hslToHex((h + 300) % 360, 70, 82),
 
     border:          hslToHex(h, 15, 22),
-    selection:       hsla(h, 40, 40, 0.45),
+    selection:       hsla(h, 70, 60, 0.4),
     searchHighlight: hsla((h + 50) % 360, 60, 70, 0.25),
     currentLine:     hsla(h, 15, 25, 0.5),
 
@@ -240,7 +240,7 @@ export const CATPPUCCIN: ThemePalette = {
   cursorAlt: "#f5c2e7",
 
   border:          "#1c1c1c",
-  selection:       "rgba(255, 255, 255, 0.16)",
+  selection:       "rgba(137, 180, 250, 0.38)",
   searchHighlight: "rgba(249, 226, 175, 0.25)",
   currentLine:     "rgba(255, 255, 255, 0.035)",
 
@@ -309,7 +309,7 @@ export const LIGHT_THEME: ThemePalette = {
   cursorAlt: "#a65d8c",
 
   border:          "#d5ccbf",
-  selection:       "rgba(148, 107, 45, 0.16)",
+  selection:       "rgba(148, 107, 45, 0.32)",
   searchHighlight: "rgba(196, 122, 26, 0.2)",
   currentLine:     "rgba(213, 204, 191, 0.4)",
 
@@ -440,6 +440,7 @@ export function applyPaletteToCss(p: ThemePalette) {
   root.style.setProperty("--accent", p.accent);
   root.style.setProperty("--accent2", p.accent2);
   root.style.setProperty("--border", p.border);
+  root.style.setProperty("--selection", p.selection);
   root.style.setProperty("--red", p.error);
   root.style.setProperty("--green", p.syntax.string || "#a6e3a1");
   root.style.setProperty("--yellow", p.warning);
@@ -571,7 +572,7 @@ export function importVSCodeTheme(json: VSCodeThemeJSON, fx: ThemeEffects): Them
 export function clearCssOverrides() {
   const root = document.documentElement;
   const props = ["--bg-base", "--bg-mantle", "--bg-crust", "--bg-surface0", "--bg-surface1",
-    "--bg-surface2", "--text", "--text-dim", "--text-muted", "--accent", "--accent2", "--border",
+    "--bg-surface2", "--text", "--text-dim", "--text-muted", "--accent", "--accent2", "--border", "--selection",
     "--red", "--green", "--yellow"];
   for (const p of props) root.style.removeProperty(p);
 }

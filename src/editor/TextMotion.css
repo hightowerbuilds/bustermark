@@ -12,6 +12,10 @@
 }
 .text-motion-word.is-target { color: var(--accent) !important; }
 
+/* A single right-clicked word grows before the spread measures the page.
+   Keep its inline box within the paragraph's existing line height. */
+.text-motion-target { font-size: calc(1em + 2px); line-height: 1; }
+
 /* Define: the target word's letters leave the line and spell the headword. */
 .text-motion-letter {
   position: absolute; white-space: pre;
@@ -32,6 +36,13 @@
     color: transparent !important;
     text-decoration-color: transparent !important;
     background-color: transparent !important;
+  }
+  /* Selection paints its own foreground, even when the text is transparent.
+     Keep the real selection for actions without drawing a second word. */
+  .text-motion-ghost::selection, .text-motion-ghost *::selection {
+    color: transparent !important;
+    background-color: transparent !important;
+    text-shadow: none !important;
   }
 }
 

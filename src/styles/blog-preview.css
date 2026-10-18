@@ -105,8 +105,8 @@
   hyphens: var(--blog-p-hyphens);
 }
 
-/* Courier: text drawn in ASCII characters (src/editor/ascii-art.ts). Each
-   paragraph opens on a large ASCII first letter, and Heading 1 and 2 are drawn
+/* Courier: text drawn in ASCII characters (src/editor/ascii-art.ts). Longer
+   paragraphs open on a large ASCII first letter, and Heading 1 and 2 are drawn
    over. The real text stays for the caret, selection, and Markdown. Never style
    ::first-letter here: WebKit then garbles typing at the end of a first line. */
 .block-editor[data-writing-style="courier"] .block-prose > h1,

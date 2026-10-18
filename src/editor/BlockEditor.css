@@ -9,4 +9,5 @@
 .block-prose.blog-preview a { cursor: text; }
 .block-prose .ProseMirror-selectednode { outline: 2px solid var(--accent); }
 .block-prose .block-raw { white-space: pre-wrap; font-family: var(--font-mono); }
-.block-prose ::selection { background: var(--bg-surface2); color: var(--text); }
+/* Translucent on purpose: WebKit washes out an opaque ::selection background. */
+.block-prose ::selection { background: var(--selection); }

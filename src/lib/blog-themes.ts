@@ -198,7 +198,7 @@ function noneTokens(palette: ThemePalette): BlogTokens {
 
 // ── Courier ──────────────────────────────────────────────────
 // A typewritten page: Courier throughout, dashed rules, Heading 1 and 2 drawn
-// in ASCII characters, and each paragraph opening on a large ASCII-drawn letter
+// in ASCII characters, and longer paragraphs opening on a large ASCII-drawn letter
 // (src/editor/ascii-art.ts; the text itself stays plain in the Markdown).
 
 function courierTokens(palette: ThemePalette): BlogTokens {

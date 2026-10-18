@@ -63,7 +63,7 @@ void (async () => {
     assert(event.defaultPrevented, `Right-clicking “${word.text}” replaces the native menu`);
     await wait(() => opening()?.classList.contains('is-visible') && window.__textMotion, 'spread settled');
   };
-  const closed = () => wait(() => !layer() && !document.querySelector('.text-motion-ghost') && !document.querySelector('.text-motion-spacer'), 'spread closed');
+  const closed = () => wait(() => !layer() && !document.querySelector('.text-motion-ghost') && !document.querySelector('.text-motion-spacer') && !document.querySelector('.text-motion-target'), 'spread closed');
 
   const prose = 'The harbor lantern swung over the quiet water while the night crew counted crates and argued softly about the tide tables, ' +
     'and somewhere past the breakwater a bell kept time with the waves as the fog rolled in from the open sea, ' +
@@ -340,12 +340,66 @@ void (async () => {
       await toHome();
     };
 
-    // `--only courier` (prepare-native-macos-smoke.py) runs just the Courier section.
+    if (!only || only === 'emphasis') {
+      const baseSize = parseFloat(getComputedStyle(first).fontSize);
+      const home = activeTab();
+      const original = words(first);
+      await openOn(target);
+      const enlarged = first.querySelector('.text-motion-target');
+      const drawn = document.querySelector('.text-motion-word.is-target');
+      assert(enlarged?.textContent === target.text, 'Only the right-clicked word receives emphasis');
+      assert(parseFloat(getComputedStyle(enlarged).fontSize) === baseSize + 2, 'The clicked word grows by exactly 2px');
+      assert(parseFloat(getComputedStyle(drawn).fontSize) === baseSize + 2, 'The motion layer uses the enlarged font');
+      const targetRange = document.createRange(); targetRange.selectNodeContents(enlarged);
+      const sourceBox = targetRange.getBoundingClientRect(); targetRange.selectNodeContents(drawn);
+      const drawnBox = targetRange.getBoundingClientRect();
+      const alignment = Math.max(Math.abs(sourceBox.left - drawnBox.left), Math.abs(sourceBox.top - drawnBox.top));
+      assert(alignment <= 1.5, `The enlarged overlay matches the word's glyph position (${alignment}px)`);
+      assert(first.textContent === prose, 'Enlargement does not change the note text');
+      key(window, 'Escape', 'Escape'); await closed(); await frame();
+      assert(driftBetween(original, words(first)) < 0.01, 'Closing restores the original font and exact word positions');
+
+      await openOn(words(first).find(word => word.text === 'lantern'));
+      action('Bold').click(); await closed();
+      assert(first.querySelector('strong')?.textContent === 'lantern' && !first.querySelector('.text-motion-target'), 'Formatting removes temporary emphasis and keeps the requested edit');
+      await openOn(words(first).find(word => word.text === 'lantern'));
+      assert(parseFloat(getComputedStyle(first.querySelector('.text-motion-target')).fontSize) === baseSize + 2, 'Bold words also grow by exactly 2px');
+      key(window, 'Escape', 'Escape'); await closed();
+      key(note, 'z', 'KeyZ', { metaKey: true });
+      await wait(() => !first.querySelector('strong') && first.textContent === prose, 'undo bold');
+
+      const textNode = document.createTreeWalker(first, NodeFilter.SHOW_TEXT).nextNode();
+      const selection = document.createRange(); selection.setStart(textNode, 0); selection.setEnd(textNode, 'The harbor'.length);
+      note.focus(); getSelection().removeAllRanges(); getSelection().addRange(selection);
+      document.dispatchEvent(new Event('selectionchange')); await delay(120);
+      await openOn(words(first).find(word => word.text === 'harbor'));
+      assert(!first.querySelector('.text-motion-target'), 'A selected phrase keeps its ordinary font size');
+      key(window, 'Escape', 'Escape'); await closed();
+
+      // Hard breaks use the rigid fallback, which must enlarge the word too.
+      footer('New Note');
+      const rigidNote = await wait(() => editor() !== note && editor(), 'hard-break note');
+      rigidNote.focus(); document.execCommand('insertText', false, 'A lantern above the quiet water.');
+      key(rigidNote, 'Enter', 'Enter', { shiftKey: true });
+      document.execCommand('insertText', false, 'Another line below it.'); await delay(100);
+      const rigidParagraph = rigidNote.querySelector('p');
+      const rigidBefore = words(rigidParagraph);
+      const rigidSize = parseFloat(getComputedStyle(rigidParagraph).fontSize);
+      await openOn(rigidBefore.find(word => word.text === 'lantern'));
+      assert(!window.__textMotion.reflowed, 'Hard-break paragraph uses the rigid fallback');
+      assert(parseFloat(getComputedStyle(rigidParagraph.querySelector('.text-motion-target')).fontSize) === rigidSize + 2, 'The fallback also enlarges the clicked word by 2px');
+      key(window, 'Escape', 'Escape'); await closed(); await frame();
+      assert(driftBetween(rigidBefore, words(rigidParagraph)) < 0.01, 'Fallback closing restores the original text layout');
+      document.getElementById(home).click(); await wait(() => editor() === note, 'return to the original note');
+    }
+
+    // `--only` (prepare-native-macos-smoke.py) runs just the requested section.
     if (!only) {
       // ── First frame matches the page exactly ──────────────────────────
       window.__textMotion = undefined;
       const event = rightClick(target.left + target.width / 2, target.top + 4);
       assert(event.defaultPrevented, 'Right-clicking a word replaces the native menu');
+      const emphasizedBefore = words(first);
       // The target paragraph's words come first; the paragraphs below it follow.
       const spans = [...document.querySelectorAll('.text-motion-word')].slice(0, before.length);
       assert(spans.map(span => span.textContent).join(' ') === before.map(word => word.text).join(' '), `Motion layer holds every word (${spans.length})`);
@@ -355,7 +409,7 @@ void (async () => {
       const glyphs = document.createRange();
       spans.forEach((span, index) => {
         glyphs.selectNodeContents(span);
-        const rect = glyphs.getBoundingClientRect(), origin = before[index];
+        const rect = glyphs.getBoundingClientRect(), origin = emphasizedBefore[index];
         const edges = { left: Math.abs(Math.floor(rect.left) - origin.left), top: Math.abs(Math.floor(rect.top) - origin.top),
           right: Math.abs(Math.ceil(rect.right) - (origin.left + origin.width)), bottom: Math.abs(Math.ceil(rect.bottom) - (origin.top + origin.height)) };
         for (const edge of Object.keys(edges)) {
@@ -381,7 +435,7 @@ void (async () => {
       const targetSpan = document.querySelector('.text-motion-word.is-target');
       assert(targetSpan?.textContent === target.text && !targetSpan.style.transform, 'The target word stays where it was');
       const aboveMoved = [...document.querySelectorAll('.text-motion-word')]
-        .filter((span, index) => before[index].top < tops[1] - 2 && span.style.transform);
+        .slice(0, emphasizedBefore.length).filter((span, index) => emphasizedBefore[index].top < tops[1] - 2 && span.style.transform);
       assert(!aboveMoved.length, 'Lines above the word do not move');
       // The paragraphs below take part in the spread: the layer draws them where they move to.
       const drawn = [...document.querySelectorAll('.text-motion-word')];
@@ -668,7 +722,7 @@ void (async () => {
     // ── Polish: keyboard entry, neighbours, landing after edits, resize, Spelling, motion ──
     if (!only || only === 'polish') await polish();
 
-    // ── Courier: an ASCII drop cap on every paragraph ─────────────────
+    // ── Courier: ASCII drop caps on substantial paragraphs ────────────
     if (!only || only === 'courier') {
     const artOf = (block, kind = '') => block?.querySelector(`:scope > .ascii-art${kind}`) ?? null;
     /** Type the way a person does: one key at a time. */
@@ -684,7 +738,7 @@ void (async () => {
     await wait(() => editor() === note && document.querySelector('.block-editor[data-writing-style="courier"]'), 'Courier style applied');
     const paragraphs = [...note.querySelectorAll(':scope > p')].filter(p => /\S/.test(p.textContent));
     await wait(() => paragraphs.every(p => artOf(p)?.dataset.state === 'settled'), 'drop caps settled', 120);
-    assert(paragraphs.length === 4, `Every paragraph has an ASCII drop cap (${paragraphs.length})`);
+    assert(paragraphs.length === 4, `Every substantial paragraph has an ASCII drop cap (${paragraphs.length})`);
     // The cap floats at the paragraph's content corner, the text after the
     // (hidden) first letter starts at its right edge plus its margin, and it is
     // about three lines tall.
@@ -715,25 +769,39 @@ void (async () => {
     try { await ipc('create_file', { path: `${notes.root}/courier-cap.txt` }); } catch { /* exists */ }
     await ipc('write_file', { path: `${notes.root}/courier-cap.txt`, content: firstCap.toDataURL('image/png') });
 
-    // A new paragraph's cap assembles; the others keep theirs.
+    // A new paragraph stays plain until 40 visible characters, then its cap assembles.
     const before4 = paragraphs.map(p => artOf(p));
     const fourthEnd = document.createRange(); fourthEnd.selectNodeContents(paragraphs[3]); fourthEnd.collapse(false);
     note.focus(); getSelection().removeAllRanges(); getSelection().addRange(fourthEnd);
     document.dispatchEvent(new Event('selectionchange')); await delay(80);
     key(note, 'Enter', 'Enter');
-    await typeKeys('T');
+    const typedParagraph = 'Typewriter keys struck the page with a steady rhythm.';
+    await typeKeys(typedParagraph.slice(0, 39));
+    const shortParagraph = note.querySelectorAll(':scope > p')[4];
+    assert(!artOf(shortParagraph) && !shortParagraph.querySelector('.drop-cap-letter'), 'A new paragraph below 40 characters has no ASCII art or hidden initial');
+    await typeKeys(typedParagraph[39]);
     const fifth = await wait(() => artOf(note.querySelectorAll(':scope > p')[4]), 'new paragraph cap');
-    assert(fifth.dataset.state === 'assembling' || !fifth.dataset.state, `A new paragraph's cap assembles from its first letter (${fifth.dataset.state})`);
-    await typeKeys('ypewriter keys struck the page.');
+    assert(fifth.dataset.state === 'assembling' || !fifth.dataset.state, `A new paragraph's cap assembles at the length cutoff (${fifth.dataset.state})`);
+    await typeKeys(typedParagraph.slice(40));
     await delay(100);
     const typed = note.querySelectorAll(':scope > p')[4].textContent;
-    assert(typed === 'Typewriter keys struck the page.', `Typing a new paragraph key by key keeps every letter (“${typed}”)`);
+    assert(typed === typedParagraph, `Typing through the drop-cap cutoff keeps every letter (“${typed}”)`);
     assert(getComputedStyle(note.querySelectorAll(':scope > p')[4]).color !== 'rgba(0, 0, 0, 0)', 'The new paragraph’s words are visible beside its cap');
     metrics.capReplacedWhileTyping = !fifth.isConnected;
     await wait(() => artOf(note.querySelectorAll(':scope > p')[4])?.dataset.state === 'settled', 'new cap settled');
     assert(paragraphs.every((p, i) => artOf(p) === before4[i]), 'Earlier caps are kept, not redrawn from scratch');
+    // Let typing's undo group end before replacing the paragraph.
+    await delay(1100);
+    const fifthRange = document.createRange(); fifthRange.selectNodeContents(note.querySelectorAll(':scope > p')[4]);
+    note.focus(); getSelection().removeAllRanges(); getSelection().addRange(fifthRange);
+    document.dispatchEvent(new Event('selectionchange')); await delay(80);
+    document.execCommand('insertText', false, 'Page 12');
+    await wait(() => note.querySelectorAll(':scope > p')[4]?.textContent === 'Page 12', 'paragraph shortened to a page label');
+    assert(!artOf(note.querySelectorAll(':scope > p')[4]) && !note.querySelectorAll(':scope > p')[4].querySelector('.drop-cap-letter'), 'Shortening to Page 12 removes the cap and restores ordinary text');
     key(note, 'z', 'KeyZ', { metaKey: true });
-    for (let i = 0; i < 40 && note.querySelectorAll(':scope > p').length > 4 && note.querySelectorAll(':scope > p')[4].textContent !== ''; i++) { key(note, 'z', 'KeyZ', { metaKey: true }); await delay(40); }
+    await wait(() => note.querySelectorAll(':scope > p')[4]?.textContent === typedParagraph && artOf(note.querySelectorAll(':scope > p')[4])?.dataset.state === 'settled', 'undo restores the paragraph and its settled cap');
+    key(note, 'z', 'KeyZ', { metaKey: true });
+    for (let i = 0; i < typedParagraph.length + 2 && note.querySelectorAll(':scope > p').length > 4 && note.querySelectorAll(':scope > p')[4].textContent !== ''; i++) { key(note, 'z', 'KeyZ', { metaKey: true }); await delay(40); }
     await wait(() => note.querySelectorAll(':scope > p').length === 4 || note.querySelectorAll(':scope > p')[4]?.textContent === '', 'undo new paragraph');
     await frame(); await frame();
     const afterUndo = [...note.querySelectorAll(':scope > p')].filter(p => /\S/.test(p.textContent)).map(p => artOf(p)?.dataset.state);
@@ -819,6 +887,7 @@ void (async () => {
       assert(rightClick(target.left + target.width / 2, target.top + 4).defaultPrevented, `Courier: right-clicking “${target.text}” on line ${lineIndex + 1} opens the spread`);
       await wait(() => opening()?.classList.contains('is-visible') && window.__textMotion, 'courier spread settled');
       assert(window.__textMotion.reflowed, `Courier line ${lineIndex + 1}: the paragraph reflows (${window.__textMotion.fallback ?? 'ok'})`);
+      assert(parseFloat(getComputedStyle(courierFirst.querySelector('.text-motion-target')).fontSize) === parseFloat(getComputedStyle(courierFirst).fontSize) + 2, 'Courier also enlarges the clicked word by 2px');
       const hole = opening().getBoundingClientRect();
       const clash = [...document.querySelectorAll('.text-motion-word')].filter(span => {
         const r = span.getBoundingClientRect();

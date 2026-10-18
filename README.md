@@ -30,6 +30,10 @@ New notes autosave in the persistent Notes directory and receive an unused
 periodic-table element name. The Desktop shortcut points to that directory and
 preserves existing Desktop items. Settings contains Appearances and Hotkeys,
 including writing styles, interface zoom, and animated WGSL note backgrounds.
+Courier uses ASCII drop caps for paragraphs of at least 40 visible characters,
+with repeated whitespace counted as one space. Short fragments such as page
+numbers and labels stay in ordinary text. Heading 1 and 2 use ASCII lettering
+regardless of length.
 
 The Language Model sidebar runs Claude through your signed-in Claude Code
 subscription. It keeps multiple saved chats,
