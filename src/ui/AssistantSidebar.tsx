@@ -6,6 +6,8 @@ import { diffWordsWithSpace } from "diff";
 import ShaderPreview from "./ShaderPreview";
 import SchemePreview from "./SchemePreview";
 import LayoutUndo from "./LayoutUndo";
+import AttachmentChips from "./AttachmentChips";
+import { useChatAttachments } from "./chat-attachment-input";
 import { LAYOUT_APPROVAL_COMMANDS, UNDOABLE_LAYOUT_COMMANDS, describeLayoutApproval } from "../lib/appearance-approval";
 import "../styles/assistant.css";
 
@@ -33,6 +35,7 @@ const Icon = (props: { children: JSX.Element }) =>
 const PlusIcon = () => <Icon><path d="M8 3v10M3 8h10" /></Icon>;
 const CloseIcon = () => <Icon><path d="M4 4l8 8M12 4l-8 8" /></Icon>;
 const SendIcon = () => <Icon><path d="M8 13V3M4 7l4-4 4 4" /></Icon>;
+const PaperclipIcon = () => <Icon><path d="M10.5 4.5 5.3 9.7a1.6 1.6 0 0 0 2.3 2.3l5.4-5.4a3 3 0 0 0-4.3-4.3L3.3 7.7a4.4 4.4 0 0 0 6.2 6.2l4-4" /></Icon>;
 const StopIcon = () => <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" rx="1.5" fill="currentColor" /></svg>;
 
 // Ghost blocks that ripple along the empty line while the input waits for text.
@@ -132,7 +135,9 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
   const timerTime = () => formatElapsed(state.running ? now() - (state.turnStartedAt ?? now()) : state.lastTurnMs ?? 0);
 
   const needsSetup = () => state.connection === "missing" || state.connection === "logged-out";
-  const canSend = () => state.ready && !state.switching && !state.running && !!draft().trim() && !needsSetup();
+  let sidebar!: HTMLElement;
+  const files = useChatAttachments(() => sidebar);
+  const canSend = () => state.ready && !state.switching && !state.running && (!!draft().trim() || files.attachments().length > 0) && !needsSetup();
   const connection = () => CONNECTION(cliName(state.provider))[state.connection];
 
   function submit(event?: Event) {
@@ -140,7 +145,7 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
     if (!canSend()) return;
     const text = draft();
     setDraft("");
-    void assistant.send(text);
+    void assistant.send(text, files.take());
   }
 
   // A click anywhere in the sidebar readies the message box, unless it was on a control or finished a text selection.
@@ -171,7 +176,15 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
 
   const entryView = (entry: AssistantEntry) => (
     <Switch>
-      <Match when={entry.kind === "user" && entry}>{e => <div class="as-user">{e().text}</div>}</Match>
+      <Match when={entry.kind === "user" && entry}>{e => <div class="as-user">
+        <Show when={e().text}>{e().text}</Show>
+        <Show when={e().attachments?.length}>
+          <div class="as-user-attachments">
+            <For each={e().images}>{image => <img src={`data:${image.mimeType};base64,${image.data}`} alt="" />}</For>
+            <span class="as-user-files">{e().attachments!.map(a => a.name).join(", ")}</span>
+          </div>
+        </Show>
+      </div>}</Match>
       <Match when={entry.kind === "assistant" && (entry.text || entry.thinking || entry.streaming) ? entry : undefined}>{e =>
         <div class="as-reply">
           <Show when={e().thinking}>
@@ -256,7 +269,7 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
   );
 
   return (
-    <aside class="assistant-sidebar" role="complementary" aria-label="Language Model" style={{ width: `${state.width}px` }} onClick={focusInput}>
+    <aside ref={sidebar} class="assistant-sidebar" classList={{ "as-drop-target": files.dragging() }} role="complementary" aria-label="Language Model" style={{ width: `${state.width}px` }} onClick={focusInput}>
       <div class="as-resize" onPointerDown={resize} aria-hidden="true" />
       <header class="as-header">
         <button class={`as-status as-status-${connection().tone}`} title={state.connectionDetail || connection().label}
@@ -328,11 +341,18 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
       </div>
 
       <form class="as-composer" onSubmit={submit}>
+        <Show when={files.attachments().length}>
+          <AttachmentChips attachments={files.attachments()} onRemove={files.remove} />
+        </Show>
+        <Show when={files.error()}><p class="as-attach-error" role="alert">{files.error()}</p></Show>
+        <Show when={state.provider === "opencode" && files.attachments().some(a => a.kind === "image")}>
+          <p class="as-hint">OpenCode passes images only to models that can see them; choose one in the Model menu.</p>
+        </Show>
         <div class="as-input">
           <textarea ref={input} data-assistant-input rows={1} value={draft()}
             aria-label="Message assistant" aria-keyshortcuts="Enter" disabled={!state.ready || state.switching}
             onInput={e => { setDraft(e.currentTarget.value); syncCaret(); }}
-            onFocus={() => syncCaret(false)} onBlur={() => setCaret(null)}
+            onFocus={() => syncCaret(false)} onBlur={() => setCaret(null)} onPaste={files.paste}
             onScroll={() => syncCaret(false)} onKeyUp={() => syncCaret(false)} onClick={() => syncCaret()}
             onKeyDown={e => {
               if (e.key === "Enter" && !e.shiftKey && !e.isComposing) submit(e);
@@ -380,6 +400,8 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
             </select>
           </span>
           <span class="as-spacer" />
+          <button class="as-attach" type="button" title="Attach images or text files (or drop them here)" aria-label="Attach files"
+            disabled={!state.ready || state.switching} onClick={() => void files.pick()}><PaperclipIcon /></button>
           <Show when={state.running} fallback={
             <button class="as-send" type="submit" title="Send (Enter)" aria-label="Send" disabled={!canSend()}><SendIcon /></button>
           }>

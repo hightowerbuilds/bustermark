@@ -1,3 +1,4 @@
+import type { ChatAttachment } from "./chat-attachments";
 import { batch, createEffect, createRoot, untrack } from "solid-js";
 import { createStore } from "solid-js/store";
 import { createAssistant, type AssistantDeps, type AssistantService, type AssistantState } from "./assistant";
@@ -179,7 +180,7 @@ export function createAssistantWorkspace(deps: WorkspaceDeps) {
   return {
     state, ready, load, flush, prepareClose, dispose, newChat, switchChat, renameChat, deleteChat, matches,
     reset: newChat,
-    async send(text: string) { await ready; if (meta.ready && !meta.switching) { await active().send(text); changed(); } },
+    async send(text: string, attachments: ChatAttachment[] = []) { await ready; if (meta.ready && !meta.switching) { await active().send(text, attachments); changed(); } },
     stop: () => active().stop(), approve: (id: string, allowed: boolean) => active().approve(id, allowed),
     setDraft: (text: string) => { if (meta.ready) active().setDraft(text); },
     setModel: (model: string) => { if (meta.ready) active().setModel(model); },

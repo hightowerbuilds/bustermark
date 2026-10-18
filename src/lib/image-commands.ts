@@ -37,14 +37,17 @@ function bytesOf(base64: string): Uint8Array {
   return bytes;
 }
 
-/** Decode with WebKit and re-encode as JPEG within MAX_IMAGE_EDGE (transparent areas become white). */
-export async function shrinkImage(image: FetchedImage, maxEdge = MAX_IMAGE_EDGE): Promise<ShrunkImage> {
+/**
+ * Decode with WebKit and re-encode as JPEG within MAX_IMAGE_EDGE (transparent areas become white).
+ * `reencode` forces JPEG even for a small image, for formats the models don't take (HEIC).
+ */
+export async function shrinkImage(image: FetchedImage, maxEdge = MAX_IMAGE_EDGE, reencode = false): Promise<ShrunkImage> {
   let bitmap: ImageBitmap;
   try { bitmap = await createImageBitmap(new Blob([bytesOf(image.data)], { type: image.mimeType })); }
   catch { throw new CommandFailure("IMAGE_UNREADABLE", "The image could not be decoded."); }
   const { width, height } = bitmap;
   const scale = Math.min(1, maxEdge / Math.max(width, height));
-  if (scale === 1 && image.bytes <= KEEP_ORIGINAL_BYTES) { bitmap.close(); return { mimeType: image.mimeType, data: image.data, width, height }; }
+  if (!reencode && scale === 1 && image.bytes <= KEEP_ORIGINAL_BYTES) { bitmap.close(); return { mimeType: image.mimeType, data: image.data, width, height }; }
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));

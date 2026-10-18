@@ -52,6 +52,9 @@ pub struct SendRequest {
     /// The CLI to run; Claude Code when absent.
     #[serde(default)]
     provider: Option<Provider>,
+    /// Images the writer attached to this message (already shrunk by the frontend).
+    #[serde(default)]
+    images: Vec<ToolImage>,
 }
 
 #[derive(Serialize)]
@@ -184,7 +187,37 @@ fn validate(request: &SendRequest) -> Result<(), String> {
     if request.tools.len() > 128 || request.system.len() > 64 * 1024 {
         return Err("Too many tools or an oversized system prompt".into());
     }
-    Ok(())
+    check_images(&request.images)
+}
+
+/// Claude Code's stream-json user message: plain text, or images followed by the text.
+fn claude_user_line(text: &str, images: &[ToolImage]) -> String {
+    let content = if images.is_empty() { json!(text) } else {
+        let mut blocks: Vec<Value> = images.iter().map(|image| json!({"type": "image", "source": {"type": "base64", "media_type": image.mime_type, "data": image.data}})).collect();
+        blocks.push(json!({"type": "text", "text": text}));
+        Value::Array(blocks)
+    };
+    json!({"type": "user", "message": {"role": "user", "content": content}}).to_string() + "\n"
+}
+
+/// Codex and OpenCode take attachments as files: write this turn's images to the conversation's
+/// folder in the app cache, replacing the previous turn's.
+fn write_attachments(dir: &std::path::Path, images: &[ToolImage]) -> Result<Vec<std::path::PathBuf>, String> {
+    use base64::Engine;
+    let _ = std::fs::remove_dir_all(dir);
+    if images.is_empty() { return Ok(Vec::new()); }
+    std::fs::create_dir_all(dir).map_err(|_| "Could not prepare the attachments.".to_string())?;
+    images.iter().enumerate().map(|(i, image)| {
+        let ext = match image.mime_type.as_str() { "image/png" => "png", "image/gif" => "gif", "image/webp" => "webp", _ => "jpg" };
+        let bytes = base64::engine::general_purpose::STANDARD.decode(&image.data).map_err(|_| "An attached image is not valid base64.".to_string())?;
+        let path = dir.join(format!("attachment-{}.{ext}", i + 1));
+        std::fs::write(&path, bytes).map_err(|_| "Could not prepare the attachments.".to_string())?;
+        Ok(path)
+    }).collect()
+}
+
+fn attachments_dir(app: &AppHandle, conversation_id: &str) -> Result<std::path::PathBuf, String> {
+    Ok(app.path().app_cache_dir().map_err(|e| e.to_string())?.join("assistant-attachments").join(conversation_id))
 }
 
 async fn find_claude() -> Option<PathBuf> {
@@ -372,9 +405,11 @@ impl Translator {
 
 /// `codex exec --json`: only BusterMark's tools (pre-approved here; the writer approves changes in
 /// the app), no shell, apps, plugins, web search, or user config. The prompt is read from stdin.
-fn codex_turn_args(config: &SessionConfig, port: u16, resume: Option<&str>) -> Vec<String> {
+fn codex_turn_args(config: &SessionConfig, port: u16, resume: Option<&str>, files: &[std::path::PathBuf]) -> Vec<String> {
     let mut args: Vec<String> = vec!["exec".into()];
     if resume.is_some() { args.push("resume".into()); }
+    // `--image=` takes exactly one file; `-i a b` would swallow the session ID or the prompt.
+    args.extend(files.iter().map(|f| format!("--image={}", f.display())));
     args.extend(["--json", "--skip-git-repo-check", "--ignore-user-config"].map(String::from));
     for feature in ["shell_tool", "unified_exec", "apps", "plugins", "multi_agent", "image_generation", "browser_use", "computer_use", "view_image", "hooks"] {
         args.extend(["--disable".into(), feature.into()]);
@@ -411,8 +446,9 @@ fn opencode_config(config: &SessionConfig, port: u16, token: &str) -> String {
     }).to_string()
 }
 
-fn opencode_turn_args(config: &SessionConfig, resume: Option<&str>, text: &str) -> Vec<String> {
+fn opencode_turn_args(config: &SessionConfig, resume: Option<&str>, text: &str, files: &[std::path::PathBuf]) -> Vec<String> {
     let mut args: Vec<String> = ["run", "--pure", "--format", "json", "--agent", SERVER_NAME, "--title", "BusterMark Assistant"].map(String::from).to_vec();
+    args.extend(files.iter().map(|f| format!("--file={}", f.display())));
     if let Some(model) = &config.model { args.extend(["--model".into(), model.clone()]); }
     if let Some(id) = resume { args.extend(["--session".into(), id.into()]); }
     args.extend(["--".into(), text.into()]);
@@ -421,7 +457,7 @@ fn opencode_turn_args(config: &SessionConfig, resume: Option<&str>, text: &str) 
 
 /// Starts the CLI for a chat: Claude Code for the whole conversation (messages go to its stdin), or
 /// Codex/OpenCode for one message (`text`), continuing `resume`.
-async fn spawn_session(app: &AppHandle, shared: &Arc<Shared>, config: SessionConfig, resume: Option<&str>, text: &str) -> Result<Session, String> {
+async fn spawn_session(app: &AppHandle, shared: &Arc<Shared>, config: SessionConfig, resume: Option<&str>, text: &str, files: &[std::path::PathBuf]) -> Result<Session, String> {
     let provider = config.provider;
     let cli = super::ai_cli::find_cli(provider.binary()).await
         .ok_or_else(|| format!("{} is not installed. {}", provider.name(), provider.install_hint()))?;
@@ -444,9 +480,9 @@ async fn spawn_session(app: &AppHandle, shared: &Arc<Shared>, config: SessionCon
             }}}).to_string();
             command.args(session_args(&config, &mcp_config, resume)).env("MCP_TOOL_TIMEOUT", TOOL_TIMEOUT.as_millis().to_string());
         }
-        Provider::Codex => { command.args(codex_turn_args(&config, port, resume)).env(CODEX_TOKEN_ENV, &token); }
+        Provider::Codex => { command.args(codex_turn_args(&config, port, resume, files)).env(CODEX_TOKEN_ENV, &token); }
         Provider::Opencode => {
-            command.args(opencode_turn_args(&config, resume, text)).env("OPENCODE_CONFIG_CONTENT", opencode_config(&config, port, &token));
+            command.args(opencode_turn_args(&config, resume, text, files)).env("OPENCODE_CONFIG_CONTENT", opencode_config(&config, port, &token));
         }
     }
     #[cfg(unix)]
@@ -521,11 +557,14 @@ pub async fn assistant_send(app: AppHandle, state: State<'_, AssistantState>, re
         stop_session(&shared, guard.take());
     }
     *shared.channel_id.lock().map_err(|_| "Assistant state unavailable")? = config.channel_id.clone();
+    // Claude Code takes images inline; Codex and OpenCode as files, written per turn.
+    let files = if provider == Provider::Claude { Vec::new() }
+        else { write_attachments(&attachments_dir(&app, &shared.conversation_id)?, &request.images)? };
     if guard.is_none() {
-        *guard = Some(spawn_session(&app, &shared, config, request.resume.as_deref(), &request.text).await?);
+        *guard = Some(spawn_session(&app, &shared, config, request.resume.as_deref(), &request.text, &files).await?);
     }
     if provider != Provider::Claude { return Ok(()); }
-    let line = json!({"type": "user", "message": {"role": "user", "content": request.text}}).to_string() + "\n";
+    let line = claude_user_line(&request.text, &request.images);
     let stdin = guard.as_mut().and_then(|s| s.stdin.as_mut()).ok_or("Claude Code is not running")?;
     stdin.write_all(line.as_bytes()).await.map_err(|_| "Claude Code stopped accepting messages")?;
     stdin.flush().await.map_err(|_| "Claude Code stopped accepting messages")?;
@@ -559,10 +598,11 @@ pub async fn assistant_interrupt(app: AppHandle, state: State<'_, AssistantState
 
 /// Ends the Claude Code process, for a new conversation or app shutdown.
 #[command]
-pub async fn assistant_reset(state: State<'_, AssistantState>, conversation_id: Option<String>) -> Result<(), String> {
+pub async fn assistant_reset(app: AppHandle, state: State<'_, AssistantState>, conversation_id: Option<String>) -> Result<(), String> {
     let shared = conversation(&state, conversation_id.as_deref())?;
     let session = shared.session.lock().await.take();
     stop_session(&shared, session);
+    if let Ok(dir) = attachments_dir(&app, &shared.conversation_id) { let _ = std::fs::remove_dir_all(dir); }
     if let Some(server) = shared.server.lock().await.take() { server.task.abort(); }
     state.conversations.lock().map_err(|_| "Assistant state unavailable")?.remove(&shared.conversation_id);
     Ok(())
@@ -749,7 +789,7 @@ mod tests {
     }
 
     fn request() -> SendRequest {
-        SendRequest { conversation_id: None, channel_id: None, text: "Hi".into(), model: Some("claude-opus-5".into()), effort: Some("high".into()), system: "Be brief.".into(), tools: vec![], resume: None, provider: None }
+        SendRequest { conversation_id: None, channel_id: None, text: "Hi".into(), model: Some("claude-opus-5".into()), effort: Some("high".into()), system: "Be brief.".into(), tools: vec![], resume: None, provider: None, images: vec![] }
     }
 
     #[test]
@@ -808,23 +848,58 @@ mod tests {
     #[test]
     fn codex_turns_use_only_bustermark_tools() {
         let config = SessionConfig { provider: Provider::Codex, channel_id: None, model: None, effort: Some("low".into()), system: "Say \"hi\".\nThen stop.".into(), tools: vec![] };
-        let args = codex_turn_args(&config, 4242, None);
+        let args = codex_turn_args(&config, 4242, None, &[]);
         assert_eq!(&args[..2], ["exec", "--json"]);
         assert!(args.contains(&"--ignore-user-config".to_string()) && args.contains(&"shell_tool".to_string()));
         assert!(args.contains(&r#"mcp_servers.bustermark.url="http://127.0.0.1:4242/mcp""#.to_string()));
         assert!(args.contains(&r#"mcp_servers.bustermark.default_tools_approval_mode="approve""#.to_string()));
         assert!(args.contains(&r#"developer_instructions="Say \"hi\".\nThen stop.""#.to_string()));
         assert!(args.contains(&r#"model_reasoning_effort="low""#.to_string()) && args.last().unwrap() == "-");
-        let resumed = codex_turn_args(&config, 4242, Some("01a1-thread"));
+        let resumed = codex_turn_args(&config, 4242, Some("01a1-thread"), &[]);
         assert_eq!(&resumed[..2], ["exec", "resume"]);
         assert_eq!(&resumed[resumed.len() - 2..], ["01a1-thread", "-"]);
+        let files = [std::path::PathBuf::from("/c/attachment-1.png"), std::path::PathBuf::from("/c/attachment-2.jpg")];
+        let attached = codex_turn_args(&config, 4242, Some("01a1-thread"), &files);
+        assert_eq!(&attached[..4], ["exec", "resume", "--image=/c/attachment-1.png", "--image=/c/attachment-2.jpg"]);
+        assert_eq!(&attached[attached.len() - 2..], ["01a1-thread", "-"]);
+    }
+
+    #[test]
+    fn sends_attached_images_to_claude_code_as_content_blocks() {
+        assert_eq!(claude_user_line("Hi", &[]), json!({"type": "user", "message": {"role": "user", "content": "Hi"}}).to_string() + "\n");
+        let image = ToolImage { mime_type: "image/png".into(), data: "iVBORw0KGgo=".into() };
+        let line: Value = serde_json::from_str(claude_user_line("What color?", &[image]).trim()).unwrap();
+        assert_eq!(line["message"]["content"], json!([
+            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBORw0KGgo="}},
+            {"type": "text", "text": "What color?"},
+        ]));
+        let mut bad = request();
+        bad.images = vec![ToolImage { mime_type: "application/pdf".into(), data: "JVBERi0=".into() }];
+        assert!(validate(&bad).is_err());
+    }
+
+    #[test]
+    fn writes_each_turns_attachments_and_clears_the_last() {
+        let dir = std::env::temp_dir().join(format!("bustermark-attachments-{}", std::process::id()));
+        let png = ToolImage { mime_type: "image/png".into(), data: "iVBORw0KGgo=".into() };
+        let jpg = ToolImage { mime_type: "image/jpeg".into(), data: "/9j/4AAQ".into() };
+        let first = write_attachments(&dir, &[png, jpg]).unwrap();
+        assert_eq!(first.iter().map(|p| p.file_name().unwrap().to_str().unwrap()).collect::<Vec<_>>(), ["attachment-1.png", "attachment-2.jpg"]);
+        assert_eq!(std::fs::read(&first[0]).unwrap(), b"\x89PNG\r\n\x1a\n");
+        assert!(write_attachments(&dir, &[]).unwrap().is_empty());
+        assert!(!dir.exists(), "the previous turn's files are removed");
+        assert!(write_attachments(&dir, &[ToolImage { mime_type: "image/png".into(), data: "!!".into() }]).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn opencode_turns_use_a_bustermark_agent() {
         let config = SessionConfig { provider: Provider::Opencode, channel_id: None, model: None, effort: None, system: "Sys".into(), tools: vec![] };
-        let args = opencode_turn_args(&config, Some("ses_1"), "-rf hello");
+        let args = opencode_turn_args(&config, Some("ses_1"), "-rf hello", &[]);
         assert_eq!(&args[args.len() - 2..], ["--", "-rf hello"]);
+        let attached = opencode_turn_args(&config, None, "Look", &[std::path::PathBuf::from("/c/attachment-1.png")]);
+        assert!(attached.contains(&"--file=/c/attachment-1.png".to_string()));
+        assert_eq!(&attached[attached.len() - 2..], ["--", "Look"]);
         assert!(args.windows(2).any(|w| w == ["--session", "ses_1"]) && args.windows(2).any(|w| w == ["--agent", "bustermark"]));
         let content: Value = serde_json::from_str(&opencode_config(&config, 4242, "tok")).unwrap();
         assert_eq!(content["tools"], json!({"*": false, "bustermark_*": true}));

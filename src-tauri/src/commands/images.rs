@@ -151,9 +151,68 @@ pub fn image_read(path: String, state: tauri::State<WorkspaceState>) -> Result<F
     encoded(bytes, path)
 }
 
+/// Largest dropped image read before WebKit shrinks it.
+const MAX_ATTACHED_IMAGE_BYTES: usize = 20 * 1024 * 1024;
+/// Largest text file added to a message.
+pub const MAX_ATTACHED_TEXT_BYTES: usize = 256 * 1024;
+
+/// A file the writer dropped, pasted, or picked for the chat.
+#[derive(serde::Serialize, Debug, PartialEq)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ChatAttachment {
+    #[serde(rename_all = "camelCase")]
+    Image { name: String, mime_type: String, data: String, bytes: usize },
+    #[serde(rename_all = "camelCase")]
+    Text { name: String, text: String, bytes: usize },
+}
+
+/// HEIC photos (iPhone): WebKit on macOS decodes them, and the frontend re-encodes them as JPEG.
+fn heic(bytes: &[u8]) -> bool {
+    bytes.get(4..8) == Some(b"ftyp") && bytes.get(8..12).is_some_and(|brand| [b"heic", b"heix", b"hevc", b"mif1"].contains(&brand.try_into().unwrap()))
+}
+
+pub fn classify_attachment(name: String, bytes: Vec<u8>) -> Result<ChatAttachment, String> {
+    let size = bytes.len();
+    let mime = image_mime(&bytes).or_else(|| heic(&bytes).then_some("image/heic"));
+    if let Some(mime) = mime {
+        if size > MAX_ATTACHED_IMAGE_BYTES { return Err(format!("{name} is larger than 20 MB.")); }
+        return Ok(ChatAttachment::Image { name, mime_type: mime.into(), data: base64::engine::general_purpose::STANDARD.encode(&bytes), bytes: size });
+    }
+    if size > MAX_ATTACHED_TEXT_BYTES { return Err(format!("{name} is larger than 256 KB. Text files up to 256 KB can be attached.")); }
+    match String::from_utf8(bytes) {
+        Ok(text) if !text.contains('\0') => Ok(ChatAttachment::Text { name, text, bytes: size }),
+        _ => Err(format!("{name} can't be attached: the chat takes images (PNG, JPEG, GIF, WebP, HEIC) and text files.")),
+    }
+}
+
+/// Reads a file the writer chose to attach (a drop or the file picker). The writer picked it,
+/// so any location is allowed; size and type are limited.
+#[command]
+pub fn chat_attachment_read(path: String) -> Result<ChatAttachment, String> {
+    let path = std::path::PathBuf::from(path);
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "file".into());
+    let meta = std::fs::metadata(&path).map_err(|_| format!("{name} was not found."))?;
+    if meta.is_dir() { return Err(format!("{name} is a folder; attach files instead.")); }
+    if meta.len() as usize > MAX_ATTACHED_IMAGE_BYTES { return Err(format!("{name} is larger than 20 MB.")); }
+    let bytes = std::fs::read(&path).map_err(|_| format!("{name} could not be read."))?;
+    classify_attachment(name, bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn classifies_attached_files() {
+        assert!(matches!(classify_attachment("a.png".into(), b"\x89PNG\r\n\x1a\nrest".to_vec()).unwrap(), ChatAttachment::Image { mime_type, .. } if mime_type == "image/png"));
+        assert!(matches!(classify_attachment("p.heic".into(), b"\0\0\0\x18ftypheic\0\0".to_vec()).unwrap(), ChatAttachment::Image { mime_type, .. } if mime_type == "image/heic"));
+        assert_eq!(classify_attachment("n.md".into(), "# Notes\ncafé".into()).unwrap(),
+            ChatAttachment::Text { name: "n.md".into(), text: "# Notes\ncafé".into(), bytes: 13 });
+        assert!(classify_attachment("a.pdf".into(), b"%PDF-1.7\n\0\xff\xfe".to_vec()).unwrap_err().contains("images"));
+        assert!(classify_attachment("big.txt".into(), vec![b'a'; MAX_ATTACHED_TEXT_BYTES + 1]).unwrap_err().contains("256 KB"));
+        assert!(chat_attachment_read("/definitely/missing.png".into()).unwrap_err().contains("not found"));
+        assert!(chat_attachment_read(std::env::temp_dir().to_string_lossy().into()).unwrap_err().contains("folder"));
+    }
 
     #[test]
     fn recognizes_images_by_their_bytes() {

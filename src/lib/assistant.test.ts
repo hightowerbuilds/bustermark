@@ -114,6 +114,28 @@ describe("assistant through Claude Code", () => {
     expect(JSON.stringify(assistant.snapshot())).not.toContain("/9j/4AAQ");
   });
 
+  it("sends attachments with a message: text files in the text, images as images, names in the chat", async () => {
+    const { commands } = catalog();
+    const cc = fakeClaudeCode();
+    const assistant = createAssistant({ commands, transport: cc.transport });
+    await assistant.send("What do you see?", [
+      { id: "1", kind: "image", name: "set.png", mimeType: "image/png", data: "iVBORw0KGgo=", width: 2, height: 2, bytes: 70 },
+      { id: "2", kind: "text", name: "notes.md", text: "Rain on neon.", bytes: 13 },
+    ]);
+    expect(cc.sent[0]).toMatchObject({ text: "What do you see?\n\nAttached file: notes.md\n```\nRain on neon.\n```", images: [{ mimeType: "image/png", data: "iVBORw0KGgo=" }] });
+    expect(assistant.state.entries[0]).toMatchObject({ kind: "user", text: "What do you see?", attachments: [{ kind: "image", name: "set.png" }, { kind: "text", name: "notes.md" }] });
+    const saved = JSON.stringify(assistant.snapshot());
+    expect(saved).toContain("notes.md");
+    expect(saved).not.toContain("iVBORw0KGgo=");
+  });
+
+  it("sends attachments without typed text", async () => {
+    const cc = fakeClaudeCode();
+    const assistant = createAssistant({ commands: catalog().commands, transport: cc.transport });
+    await assistant.send("", [{ id: "1", kind: "image", name: "a.jpg", mimeType: "image/jpeg", data: "/9j/x", width: 1, height: 1, bytes: 9 }]);
+    expect(cc.sent[0].text).toBe("Here is the attached file.");
+  });
+
   it("waits for approval before a write tool, and reports a denial", async () => {
     const { commands, renamed } = catalog();
     const cc = fakeClaudeCode();

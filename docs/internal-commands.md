@@ -350,6 +350,17 @@ with the first message (below); there is no global browser bridge or shell CLI.
 
 ### Assistant sidebar
 
+**Attachments** (`growth/phases/chat-attachments.md`): drop files on the sidebar,
+paste a screenshot into the message box, or use the paperclip. Each becomes a
+removable chip and goes out with the next message (up to 8; nothing is sent until
+the writer sends). Images (PNG, JPEG, GIF, WebP, HEIC; up to 20 MB) are shrunk to
+1568 px and sent as images: content blocks to Claude Code, `--image=` files to
+Codex, `--file=` files to OpenCode (which passes them only to models that can see
+images). Text files (UTF-8, up to 256 KB each, 512 KB in all) are added to the
+message in a fence with their name. Other files are refused by name. Temporary
+files for Codex and OpenCode live in the app cache per chat and are replaced each
+turn. Saved chats keep the attachment names, not their contents.
+
 The **Assistant** is a chat sidebar on the right of the workspace. Ctrl+Shift+A
 (or "Toggle Assistant" in the command palette) opens it and focuses the message
 box; pressed again from inside the sidebar, it closes it. F6 includes it in

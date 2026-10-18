@@ -23,6 +23,8 @@ export interface SendRequest {
   resume?: string;
   /** The CLI that answers: Claude Code (default), Codex, or OpenCode. */
   provider?: AiProvider;
+  /** Images the writer attached to this message. */
+  images?: ToolImage[];
 }
 
 export type SessionEvent =

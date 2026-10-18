@@ -2,6 +2,7 @@ import { createStore, produce } from "solid-js/store";
 import { createSignal } from "solid-js";
 import { buildAssistantTools, type AssistantTool, type ToolTarget } from "./assistant-tools";
 import type { AssistantTransport, CliStatus, SessionEvent, ToolCall, ToolImage } from "./assistant-transport";
+import { composeMessage, type ChatAttachment } from "./chat-attachments";
 import type { FeatureCommands } from "./feature-commands";
 import { isAiProvider, type AiProvider } from "./ai-oneshot";
 
@@ -64,7 +65,7 @@ When you write prose for the writer, match their voice and keep their meaning. A
 
 export type ToolStatus = "running" | "awaiting" | "done" | "failed" | "denied" | "cancelled";
 export type AssistantEntry =
-  | { id: string; kind: "user"; text: string }
+  | { id: string; kind: "user"; text: string; attachments?: Array<{ kind: "image" | "text"; name: string }>; images?: ToolImage[] }
   | { id: string; kind: "assistant"; text: string; thinking: string; streaming: boolean }
   | { id: string; kind: "tool"; toolUseId: string; command: string; effect: "read" | "write"; args: unknown; status: ToolStatus; result: string; images?: ToolImage[] }
   | { id: string; kind: "notice"; tone: "error" | "info"; text: string };
@@ -324,11 +325,14 @@ export function createAssistant(deps: AssistantDeps) {
 
   const subscription = deps.transport.subscribe(onEvent, call => void onToolCall(call));
 
-  async function send(text: string) {
+  async function send(text: string, attachments: ChatAttachment[] = []) {
     const trimmed = text.trim();
-    if (!trimmed || state.running) return;
+    if ((!trimmed && !attachments.length) || state.running) return;
     const generation = ++lifecycle;
-    add({ id: newId(), kind: "user", text: trimmed });
+    const message = composeMessage(trimmed, attachments);
+    // The chat shows what the writer typed and the attachment names; images stay in memory only.
+    add({ id: newId(), kind: "user", text: trimmed, ...(attachments.length ? {
+      attachments: attachments.map(a => ({ kind: a.kind, name: a.name })), images: message.images } : {}) });
     toolSet ??= buildAssistantTools(deps.commands);
     turn = new AbortController();
     setState({ running: true, turnStartedAt: Date.now(), lastTurnMs: null });
@@ -337,7 +341,8 @@ export function createAssistant(deps: AssistantDeps) {
       await resetting;
       if (generation !== lifecycle) return;
       await deps.transport.send({
-        text: trimmed,
+        text: message.text,
+        ...(message.images.length ? { images: message.images } : {}),
         provider: state.provider,
         model: state.model || undefined,
         effort: sentEffort(state.provider, state.model, state.effort),

@@ -264,6 +264,7 @@ pub fn run() {
             commands::color_schemes::color_scheme_delete,
             commands::images::image_fetch,
             commands::images::image_read,
+            commands::images::chat_attachment_read,
             commands::image_sources::page_images,
         ])
         .build(tauri::generate_context!())
