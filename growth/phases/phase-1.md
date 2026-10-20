@@ -3,17 +3,41 @@
 Foundation decisions: [first writing workflow](writing-workflow.md), including local
 Markdown/plain-text files, retained canvas editing, and reviewed AI selection revisions.
 
-Status: **PAUSED at user request** — Phase 1 remains partially complete. Writing
-panes, Copy/Paste, local dictionary lookup, selection-scoped AI review, and macOS
-selected-text playback are implemented.
-Whole-document speech, audio export, and speech model discovery remain open. See the
-[Phase 1 build log](../build-log/2026-09-20-phase-1.md).
+Status: **Voice scope DROPPED (2026-10-19)** — Writing panes, Copy/Paste, local
+dictionary lookup, selection-scoped AI review, and macOS selected-text playback are
+implemented. Whole-document speech, audio export, the Voices & Models catalog, and
+the multi-engine speech service will not be built; see [Voice decision](#voice-decision-2026-10-19).
+See the [Phase 1 build log](../build-log/2026-09-20-phase-1.md).
 Selection work: [selection actions build log](../build-log/2026-09-20-selection-actions.md).
 Review work: [lookup and AI review build log](../build-log/2026-09-20-writing-review.md).
 Speech work: [macOS voices build log](../build-log/2026-09-20-macos-speech.md).
 
 Depends on: [Phase 0 — BusterMark foundation](phase-0.md), including its shared
 command interface and access to live document text.
+
+## Voice decision (2026-10-19)
+
+BusterMark will not build its own speech product. Where it speaks, it uses the
+operating system's voices, as the implemented selected-text playback (1.5) does.
+Dictation is handled by separate software the writer already uses, through the
+native paste path BusterMark keeps for it.
+
+Dropped, and not to be resumed without a new decision:
+
+- 1.3's remaining items: paragraph, from-cursor, and whole-document reading;
+  passage navigation; long-document chunking; spoken Markdown rules;
+  pronunciation substitutions; reading presets.
+- 1.4 Voices & Models workspace: catalog, compatibility filtering, installs,
+  auditions, and benchmarks.
+- 1.6 Speech engine architecture: adapters for local models and cloud providers.
+- 1.7 Audio export.
+- The voice items in the completion criteria and the voice questions under
+  "Decisions to resolve".
+
+Kept: selected-text playback with installed macOS voices, its controls, and its
+`speech` commands. 1.5's open items (spoken-range mapping, voice-list refresh,
+offline and minimum-version checks) refine that existing feature and stay open
+as optional polish.
 
 ## Direction
 
@@ -165,6 +189,8 @@ multiple selections remain design decisions.
 
 ## 1.3 — Read writing aloud
 
+> **Dropped 2026-10-19** (see [Voice decision](#voice-decision-2026-10-19)). Unchecked items here will not be built; the completed selection reading stays.
+
 - [x] **COMPLETED** — Read selected text, including unsaved edits, with installed
   macOS voices. Voice opens controls; Read selection starts playback explicitly.
 - [ ] Read the current paragraph, from the cursor onward, or the whole document.
@@ -190,6 +216,8 @@ passage, and suppress stale highlights when source positions no longer match.
 Stopping must also cancel queued synthesis and discard late audio/events.
 
 ## 1.4 — Voices & Models workspace
+
+> **Dropped 2026-10-19** (see [Voice decision](#voice-decision-2026-10-19)). Unchecked items here will not be built.
 
 Create a dedicated area for finding a suitable voice and engine, auditioning it,
 and making it available to the writing workflow.
@@ -278,6 +306,8 @@ needs a separate availability and authorization check before being advertised.
 
 ## 1.6 — Speech engine architecture
 
+> **Dropped 2026-10-19** (see [Voice decision](#voice-decision-2026-10-19)). Unchecked items here will not be built.
+
 Use one speech service with adapters for Apple system speech, supported local
 models, and any selected cloud providers.
 
@@ -313,6 +343,8 @@ timestamps may require rendered audio or alignment; unsupported features must be
 reported honestly, with passage-level navigation as the baseline.
 
 ## 1.7 — Audio export
+
+> **Dropped 2026-10-19** (see [Voice decision](#voice-decision-2026-10-19)). Unchecked items here will not be built.
 
 - [ ] Export a selection or complete document using the chosen voice and settings.
 - [ ] Establish WAV as the initial proposed export format; evaluate compressed
@@ -386,15 +418,16 @@ exports, or downloads. UI and AI operate the same live workspace and playback st
   captured note and revision even if the writer changes panes.
 - [ ] Paste and accepted AI edits are undoable, and speech highlighting leaves the
   editing caret and selection intact.
-- [ ] A writer can listen to selected or full unsaved document text with working
+- [ ] A writer can listen to selected ~~or full~~ unsaved document text with working
   playback controls, understandable progress, and accurate available highlighting.
+  *(Full-document reading dropped 2026-10-19.)*
 - [ ] macOS voices can be discovered, previewed, selected, and used without cloud
   credentials; the route to managing additional Apple voices is clear.
-- [ ] The Voices & Models workspace supports discovery, filtering, comparison,
-  favorites, and truthful compatibility/availability information.
-- [ ] At least one selected non-Apple engine works through the same service and
-  comparison flow; the local/cloud choice is recorded before implementation.
-- [ ] Supported voices can export a complete audio file that plays successfully.
+- [ ] ~~The Voices & Models workspace supports discovery, filtering, comparison,
+  favorites, and truthful compatibility/availability information.~~ *(Dropped 2026-10-19.)*
+- [ ] ~~At least one selected non-Apple engine works through the same service and
+  comparison flow; the local/cloud choice is recorded before implementation.~~ *(Dropped 2026-10-19.)*
+- [ ] ~~Supported voices can export a complete audio file that plays successfully.~~ *(Dropped 2026-10-19.)*
 - [ ] AI and human commands can operate the same panes, notes, selections, and
   speech jobs.
 - [ ] Verification covers long text, Unicode, edits during playback, cancellation,
@@ -410,12 +443,12 @@ exports, or downloads. UI and AI operate the same live workspace and playback st
 - Decide whether lookup needs a configured search provider beyond the implemented
   offline macOS dictionary integration.
 - Additional special cursor behavior beyond the selection workflow defined here.
-- Initial languages and listening use cases: proofreading, narration, or both.
-- First local model/runtime and whether a cloud adapter ships in this phase.
+- Initial languages and listening use cases: proofreading, narration, or both. *(Dropped with the voice scope.)*
+- First local model/runtime and whether a cloud adapter ships in this phase. *(Dropped with the voice scope.)*
 - Minimum macOS version and required Intel/Apple Silicon coverage.
-- Default placement of the voice workspace and persistent playback controls.
-- Whether Personal Voice belongs in this phase.
-- Additional export formats and how long generated audio/comparisons are retained.
+- Default placement of the voice workspace and persistent playback controls. *(Dropped with the voice scope.)*
+- Whether Personal Voice belongs in this phase. *(Dropped with the voice scope.)*
+- Additional export formats and how long generated audio/comparisons are retained. *(Dropped with the voice scope.)*
 
 Technical references were checked while drafting. Recheck API availability and
 model/provider metadata when choosing and implementing the integrations.

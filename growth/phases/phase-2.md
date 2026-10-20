@@ -9,8 +9,8 @@ for exact verification and remaining platform coverage. The next milestone is
 [Phase 3 — Claude and Codex connections](phase-3.md).
 
 Build on the [writing workflow](writing-workflow.md), [Phase 1](phase-1.md), and
-[shared internal commands](../../docs/internal-commands.md). Phase 1 remains
-paused with its unfinished tasks intact. This document starts Phase 2's scope;
+[shared internal commands](../../docs/internal-commands.md). Phase 1's voice
+scope was later dropped (2026-10-19); its other unfinished tasks remain intact. This document starts Phase 2's scope;
 it does not mark those earlier tasks complete.
 
 ## Direction

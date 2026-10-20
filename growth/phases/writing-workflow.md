@@ -3,7 +3,8 @@
 Phase 0 implementation brief, September 20, 2026. These decisions define the
 initial Phase 1 workflow. Writing panes, Copy/Paste, local dictionary lookup, and
 selection-scoped AI review, and macOS selected-text speech are implemented.
-Whole-document speech, audio export, and speech model discovery remain to build.
+Whole-document speech, audio export, and speech model discovery were dropped on
+2026-10-19; BusterMark uses the operating system's voices (see [Phase 1](phase-1.md)).
 
 ## Documents and storage
 
