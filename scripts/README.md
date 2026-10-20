@@ -120,6 +120,29 @@ it selected). Codex and OpenCode then name the swatch. Writes are approved
 automatically. About seven small live requests. Its report is
 `Notes/native-macos-vision-smoke-result.json`; success is `ok: true`.
 
+`python3 scripts/prepare-native-macos-smoke.py phase3` stages the Phase 3 check.
+It seeds Garden.md and stages a CLI folder at
+`/private/tmp/bustermark-macos-phase3-smoke-cli`. Its `current` link points at your
+real `claude`, next to links to the fake CLIs in `scripts/fake-cli/`. Launch with:
+
+```sh
+BUSTERMARK_CLI_DIR=/private/tmp/bustermark-macos-phase3-smoke-cli/current \
+BUSTERMARK_FAKE_STATE=/private/tmp/bustermark-macos-phase3-smoke-cli \
+./src-tauri/target/debug/bustermark
+```
+
+Debug builds look for `claude` only in `BUSTERMARK_CLI_DIR`. On Claude Haiku the
+check:
+- makes a layout change through the Assistant and undoes it in the chat;
+- applies Reading room and resets it from Settings › Note layout;
+- runs `/note open` and `/selection ai` from the command bar.
+
+Then, at each `cli-<variant>` stage, the driver repoints `current` at that variant
+and writes `ack-cli-<variant>.txt`: not-installed, signed-out, crash, expired, and
+back to `real`. The page checks the setup views, the crash and expiry notices, and
+**Check again** recovering. Its report is
+`Notes/native-macos-phase3-smoke-result.json`; success is `ok: true`.
+
 For printing, prepare a disposable bundle with fixture routing using:
 
 ```sh

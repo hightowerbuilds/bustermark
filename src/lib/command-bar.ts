@@ -2,25 +2,32 @@
 // request for the Language Model. Routing is by that rule alone; no model takes part.
 
 import type { CommandResult, CommandSchema, FeatureCommands } from "./feature-commands";
+import { snapshotSchema } from "./selection-commands";
 
 export type CommandDescription = ReturnType<FeatureCommands["describe"]>[number];
 
-/** What a bar command takes from the rest of the line: nothing, one string, or the source tab. */
-export type BarArgument = { kind: "none" } | { kind: "text"; name: string } | { kind: "tab" };
+/**
+ * What a bar command takes: nothing, one string from the rest of the line, the source tab, or the
+ * source note's current selection (read with `selection read` when the command runs).
+ */
+export type BarArgument = { kind: "none" } | { kind: "text"; name: string } | { kind: "tab" } | { kind: "selection" };
 
 export type BarLine =
   | { kind: "empty" }
   | { kind: "request"; text: string }
-  | { kind: "command"; command: string; args: Record<string, unknown>; closes: boolean }
+  /** `selectionOf`: read this tab's selection and send it as the arguments. */
+  | { kind: "command"; command: string; args: Record<string, unknown>; closes: boolean; selectionOf?: string }
   | { kind: "invalid"; command?: string; message: string };
 
 /** Commands that move the writer to another note, so the bar closes after them. */
-const CLOSES_BAR = new Set(["note open", "document create"]);
+const CLOSES_BAR = new Set(["note open", "document create", "selection ai", "selection lookup", "selection voice"]);
+const SELECTION_TARGET = JSON.stringify(snapshotSchema);
 const ALIASES: Record<string, string> = { help: "commands list" };
 
 /** Decision 2: a command can be typed in the bar only if it needs no JSON. */
 export function barArgument(schema: CommandSchema): BarArgument | null {
   if (schema.type !== "object") return null;
+  if (JSON.stringify(schema) === SELECTION_TARGET) return { kind: "selection" };
   const required = schema.required ?? [];
   if (required.length === 0) return { kind: "none" };
   if (required.length !== 1 || schema.properties?.[required[0]]?.type !== "string") return null;
@@ -82,9 +89,12 @@ export function parseBarLine(line: string, catalog: CommandDescription[], source
     if (!rest) return { kind: "invalid", command: command.name, message: `${usage} needs a ${argument.name}.` };
     args = { [argument.name]: rest };
   } else if (rest) {
-    return { kind: "invalid", command: command.name, message: argument.kind === "tab"
+    return { kind: "invalid", command: command.name, message: argument.kind === "tab" || argument.kind === "selection"
       ? `/${command.name} works on the current note and takes nothing after its name.`
       : `/${command.name} takes nothing after its name.` };
+  } else if (argument.kind === "selection") {
+    if (!sourceTabId) return { kind: "invalid", command: command.name, message: `/${command.name} works on the selected text in a note. Open one and select a passage first.` };
+    return { kind: "command", command: command.name, args: {}, closes: CLOSES_BAR.has(command.name), selectionOf: sourceTabId };
   } else if (argument.kind === "tab") {
     if (!sourceTabId) return { kind: "invalid", command: command.name, message: `/${command.name} works on the current note. Open one first.` };
     args = { tabId: sourceTabId };

@@ -4,6 +4,8 @@ import { createComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { createStore } from "solid-js/store";
 import { createWorkbenchCommands } from "../lib/workbench-commands";
+import { registerSelectionCommands } from "../lib/selection-commands";
+import { createEditorEngine } from "../editor/engine";
 
 const mock = vi.hoisted(() => ({ setOpen: vi.fn(), send: vi.fn(async (_text: string) => {}), refreshStatus: vi.fn(async () => {}) }));
 const [assistantState, setAssistantState] = createStore({
@@ -15,6 +17,10 @@ const service = createWorkbenchCommands({
   activeTabId: () => "file_7", workspaceRoot: () => "/n",
   document: () => ({ text: "the tide tables", revision: 3, dirty: false }), focusTab: () => {}, createNote: () => "file_8",
 });
+const engine = createEditorEngine("the tide tables turned");
+const copied: string[] = [];
+registerSelectionCommands(service, { hasTab: id => id === "file_7", engine: id => id === "file_7" ? engine : undefined,
+  readClipboard: async () => "", writeClipboard: async text => { copied.push(text); return true; } });
 const dispatch = vi.spyOn(service, "dispatch");
 vi.mock("../lib/buster-context", () => ({ useBuster: () => ({
   commands: service,
@@ -65,6 +71,23 @@ describe("command bar", () => {
     const bar = mount("file_7");
     await bar.submit("/document read");
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ command: "document read", args: { tabId: "file_7" } }), "user");
+  });
+
+  it("runs a selection command on the source note's current selection", async () => {
+    engine.setSelection({ line: 0, col: 4 }, { line: 0, col: 15 });
+    const bar = mount("file_7");
+    await bar.submit("/selection copy");
+    expect(dispatch.mock.calls.map(([request]) => request.command)).toEqual(["selection read", "selection copy"]);
+    expect(copied).toEqual(["tide tables"]);
+    expect(bar.text()).toContain("copied: true");
+  });
+
+  it("explains an empty selection instead of running the command", async () => {
+    engine.setCursor({ line: 0, col: 0 });
+    const bar = mount("file_7");
+    await bar.submit("/selection copy");
+    expect(dispatch.mock.calls.map(([request]) => request.command)).toEqual(["selection read"]);
+    expect(bar.text()).toContain("Select a nonempty passage first.");
   });
 
   it("reports an unknown command and opens nothing", async () => {

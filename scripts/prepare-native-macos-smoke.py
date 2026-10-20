@@ -7,7 +7,7 @@ import tempfile
 import uuid
 
 parser = argparse.ArgumentParser()
-parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments", "vision"])
+parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments", "vision", "phase3"])
 parser.add_argument("--only", choices=["courier", "polish", "emphasis"], help="run a single section of the spread smoke test")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
@@ -55,6 +55,22 @@ def solid_png(width, height, rgb):
     chunk = lambda kind, data: struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(row * height, 9)) + chunk(b"IEND", b""))
+if args.kind == "phase3":
+    # A note for /note open, and a CLI folder the run switches between the real Claude Code
+    # and the fake ones in scripts/fake-cli/ by repointing `current`.
+    notes.mkdir(parents=True, exist_ok=True)
+    (notes / "Garden.md").write_text("# Garden\n\nThe marigolds came up by the gate after the rain.\n")
+    cli = Path(f"/private/tmp/bustermark-macos-phase3-smoke-cli")
+    shutil.rmtree(cli, ignore_errors=True)
+    (cli / "real").mkdir(parents=True)
+    claude = shutil.which("claude")
+    if not claude:
+        raise RuntimeError("The phase3 check needs the real Claude Code CLI on PATH")
+    (cli / "real" / "claude").symlink_to(Path(claude).resolve())
+    for variant in ["not-installed", "signed-out", "crash", "expired"]:
+        (cli / variant).symlink_to(root / "scripts" / "fake-cli" / variant)
+    (cli / "current").symlink_to(cli / "real")
+    print(f"Launch with: BUSTERMARK_CLI_DIR={cli}/current BUSTERMARK_FAKE_STATE={cli} ./src-tauri/target/debug/bustermark")
 if args.kind == "vision":
     # A swatch whose color the model can only name by looking, and two notes for phrase search.
     import random

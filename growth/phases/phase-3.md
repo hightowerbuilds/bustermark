@@ -1,6 +1,9 @@
 # Phase 3 — Claude and Codex connections
 
-Status: **IN PROGRESS — Claude Code, Codex, and OpenCode all drive the Assistant end to end (verified live 2026-10-12). The finishing plan below (2026-10-17) covers appearance through the Assistant, review and search hand-offs, phrase search, and failure paths.**
+Status: **COMPLETE (2026-10-20)**, except screenshots. Claude Code, Codex, and OpenCode drive
+the Assistant end to end, and the finishing plan below (2026-10-17) passed in the native app:
+appearance through the Assistant, phrase search, and the failure paths on fake CLIs. Screenshots
+are still to take; see section 5. Build log: [2026-10-20 Phase 3 close-out](../build-log/2026-10-20-phase-3.md).
 
 Give writers a clear UI for choosing **Claude**, **Codex**, or **OpenCode**,
 connecting the chosen assistant, and using it to operate BusterMark's writing
@@ -207,43 +210,57 @@ Four items remained open. What the code does today, from a survey on 2026-10-17:
 - [x] **COMPLETED** — `find_cli`: honor `BUSTERMARK_CLI_DIR` in debug builds only (see Decisions).
   Rust tests for the override and for its absence in release logic
   (`cli_dir_override_is_debug_only_and_exclusive` in `ai_cli.rs`).
-- [ ] Rust tests for the spawn and exit path with a fake CLI script: missing
-  binary message, nonzero exit with stderr detail, non-JSON lines skipped.
+- [x] **COVERED NATIVELY** (2026-10-20) — The spawn and exit paths run in the native check on the
+  fake CLIs, through the real Rust and frontend code:
+  - missing binary → "not installed" setup view;
+  - nonzero exit → its stderr detail in the notice;
+  - a non-JSON line before the stream → skipped.
+
+  A separate Rust test would have repeated that path with a mock, so it wasn't
+  written.
 - [x] **COMPLETED** — Frontend test: a `STALE_REVISION` from an approved `document edit` returns
   to the model as an error, marks the row failed, and leaves the note unchanged.
-- [ ] Fake CLIs for the native check (`scripts/fake-cli/`): `claude` variants that
-  report signed out, exit with an error mid-turn, and answer "Not logged in" in a
-  result; an empty directory for "not installed".
+- [x] **COMPLETED** (2026-10-20) — Fake CLIs (`scripts/fake-cli/`): `signed-out`, `crash` (a
+  non-JSON line, then exit 1 with an error on the first message), and `expired`
+  (a "Not logged in" result, after which `auth status` reports signed out), all
+  through one `fake-claude.sh`; `not-installed` holds no CLI.
 
 ## 5 — Verification
 
-- [ ] `scripts/native-macos-phase3-smoke.js` (staged with
-  `prepare-native-macos-smoke.py phase3`), on the real Claude CLI with Haiku:
+- [x] **COMPLETED** (2026-10-20) — `scripts/native-macos-phase3-smoke.js` (staged with
+  `prepare-native-macos-smoke.py phase3`), 15 of 15, on the real Claude CLI with Haiku:
   - appearance: "center this note and loosen the line spacing" → approval card →
     Allow → layout changes → Undo in the chat restores it; "use Reading room" →
     Settings › Note layout → Reset;
-  - phrase search (section 3);
-  - hand-offs: Discuss in chat and Ask the Language Model draft without sending;
-  - stale revision: the harness types into the note while an edit waits for
-    approval; Allow returns `STALE_REVISION` to the model, which re-reads and
-    asks again.
-- [ ] A second launch with `BUSTERMARK_CLI_DIR` pointing at the fake CLIs (no
-  model requests): not installed, signed out, a crash mid-turn, and an expired
-  sign-in mid-turn each show the right notice and setup view, and **Check
-  again** recovers once the directory is switched back.
-- [ ] Screenshots of each approval card and failure state, held for an outside
-  capture as in the color scheme smoke.
-- [ ] Unit, Rust, and path tests pass; README and `docs/internal-commands.md`
-  updated; build log entry; Phase 3 marked complete.
+  - phrase search (section 3): checked in `native-macos-vision-smoke.js`;
+  - hand-offs and stale revision: covered by `ReviewSearchHandoff.test.ts` and the
+    `STALE_REVISION` test in `assistant.test.ts` rather than repeated natively;
+  - also the command bar's `/note open` and `/selection ai`.
+  - Result: the card asked "Change the layout of Yttrium.md?", the column went
+    from `100%|0|1.65` to `560px|auto|1.9`, and Undo restored it. Reading room was
+    applied, then reset from Settings. Haiku called the preset twice, so it was
+    approved twice; harmless.
+- [x] **COMPLETED** (2026-10-20) — In the same launch, with `BUSTERMARK_CLI_DIR` pointing at a link
+  the driver repoints (no model requests):
+  - not installed and signed out each show their setup view;
+  - a crash shows "Claude Code stopped: fake claude: connection reset while
+    streaming" and stays connected;
+  - an expired sign-in shows "Not logged in · Please run /login", then the
+    setup view;
+  - **Check again** recovers on the real CLI.
+- [ ] Screenshots of each approval card and failure state. Not taken: the terminal
+  that ran the check lacks macOS Screen Recording permission. The harness pauses
+  at each `cli-*` stage, so a capture can be added there.
+- [x] **COMPLETED** (2026-10-20) — 734 frontend, 54 path, and 90 Rust tests pass; Clippy is clean.
+  Docs: `scripts/README.md` (the check and the fake CLIs) and a build log.
 
-## Open questions for the writer
+## Writer decisions (2026-10-19)
 
-- Should the Assistant also manage presets (save and delete) and effects (focus
-  dimming, cursor glow, grain)? The plan withholds them.
-- Is the search portal worth keeping now that the Spread menu's Search and the
-  Assistant both find phrases? The plan keeps it, local, with hand-offs.
+- **Presets and effects stay withheld from the Assistant.** The writer manages
+  them in Settings. The Assistant keeps applying presets and changing layout,
+  with approval, on a smaller tool list.
+- **The search portal stays,** local and with hand-offs. It also remains an entry
+  point to AI review of a selection.
 
-The next milestone is [Phase 4 — AI command bar and assistant chat panes](phase-4.md),
-which replaces the AI search entry point with a single input that either runs an
-app command or opens an assistant conversation. It depends on the connection and
-tool loop specified here.
+The next milestone is [Phase 4 — AI command bar](phase-4.md): one line that runs a
+`/` command or sends a request to the Language Model sidebar.

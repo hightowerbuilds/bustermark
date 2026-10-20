@@ -37,7 +37,13 @@ const CommandBar: Component<CommandBarProps> = (props) => {
   }));
   createEffect(on(suggestions, () => setHighlight(0)));
 
-  async function runCommand(command: string, args: Record<string, unknown>, closes: boolean) {
+  async function runCommand(command: string, args: Record<string, unknown>, closes: boolean, selectionOf?: string) {
+    if (selectionOf) {
+      // The note's selection as it is now; the bar has focus, but the editor keeps its selection.
+      const read = await commands.dispatch({ requestId: crypto.randomUUID(), command: "selection read", args: { tabId: selectionOf } }, "user");
+      if (!read.ok) { setOutcome({ kind: "result", summary: summarizeResult(read), raw: read }); return; }
+      args = read.data as Record<string, unknown>;
+    }
     const raw = await commands.dispatch({ requestId: crypto.randomUUID(), command, args }, "user");
     setOutcome({ kind: "result", summary: summarizeResult(raw), raw });
     if (raw.ok) setLine("");
@@ -76,7 +82,7 @@ const CommandBar: Component<CommandBarProps> = (props) => {
     }
     setBusy(true);
     try {
-      if (parsed.kind === "command") await runCommand(parsed.command, parsed.args, parsed.closes);
+      if (parsed.kind === "command") await runCommand(parsed.command, parsed.args, parsed.closes, parsed.selectionOf);
       else await sendRequest(parsed.text);
     } catch (error) {
       setOutcome({ kind: "message", tone: "error", text: error instanceof Error ? error.message : String(error) });

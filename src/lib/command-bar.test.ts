@@ -3,6 +3,7 @@ import { createEditorEngine } from "../editor/engine";
 import { barArgument, barCompletions, parseBarLine, summarizeResult } from "./command-bar";
 import { registerDocumentEditCommands } from "./document-edit";
 import { registerNoteCommands } from "./note-commands";
+import { registerSelectionCommands } from "./selection-commands";
 import type { Tab } from "./tab-types";
 import { createWorkbenchCommands } from "./workbench-commands";
 
@@ -28,6 +29,8 @@ function fixture() {
     openFile: async path => tabs.find(tab => tab.path === path)?.id ?? "file_9",
   });
   registerDocumentEditCommands(service, { hasTab: id => id === "file_1", engine: id => id === "file_1" ? engine : undefined });
+  registerSelectionCommands(service, { hasTab: id => id === "file_1", engine: id => id === "file_1" ? engine : undefined,
+    readClipboard: async () => "", writeClipboard: async () => true });
   return { service, catalog: service.describe() };
 }
 
@@ -52,6 +55,14 @@ describe("command bar routing", () => {
     expect(parse("/Document Create")).toMatchObject({ kind: "command", command: "document create", closes: true });
     expect(parse("/help")).toMatchObject({ kind: "command", command: "commands list" });
     expect(parse("/commands describe note open")).toMatchObject({ args: { name: "note open" } });
+  });
+
+  it("gives commands that take a captured selection the source note's selection", () => {
+    expect(parse("/selection copy")).toEqual({ kind: "command", command: "selection copy", args: {}, closes: false, selectionOf: "file_1" });
+    expect(parse("/selection paste")).toMatchObject({ kind: "command", command: "selection paste", closes: false, selectionOf: "file_1" });
+    expect(parse("/selection copy", null)).toMatchObject({ kind: "invalid", message: expect.stringContaining("select a passage first") });
+    expect(parse("/selection copy now")).toMatchObject({ kind: "invalid", message: expect.stringContaining("takes nothing after its name") });
+    expect(parse("/selection set")).toMatchObject({ kind: "invalid", message: expect.stringContaining("Ask the Language Model") });
   });
 
   it("brings an opened note to the front and closes the bar", () => {

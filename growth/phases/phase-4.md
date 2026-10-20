@@ -1,8 +1,8 @@
 # Phase 4 — AI command bar
 
-Status: **IN PROGRESS — the bar is built (2026-10-19).** Open: the search portal
-decision, a native recheck of the surrounding writing tools, and `/note open`
-end to end. Build log: [2026-10-19 command bar](../build-log/2026-10-19-command-bar.md).
+Status: **IN PROGRESS — the bar is built (2026-10-19).** Open: a native recheck
+of the surrounding writing tools (Spread, selection, review smokes) with the bar
+in place. Build log: [2026-10-19 command bar](../build-log/2026-10-19-command-bar.md).
 
 Turn the Ctrl+` command line into the one place a writer types to BusterMark.
 A line that starts with `/` runs an app command and reports the result in the
@@ -113,15 +113,16 @@ Chat panes are dropped. The bar sends requests to the sidebar instead.
 - [ ] Keep selection actions, the Spread menu, writing review, speech, and
   formatting working alongside the bar. The full unit suite passes; their native
   smokes have not been rerun with the bar in place.
-- [ ] Decide the future of Phase 2's local open-note search portal (open
-  decision below). Phase 3 asks the same question.
+- [x] **RESOLVED** — The search portal stays (Decision 4).
 
 ## Acceptance examples
 
 - [x] **COMPLETED** — `/document create` opens a new note, and the sidebar does not open.
 - [x] **COMPLETED** — `/notes search tide tables` lists matching notes inline.
-- [ ] `/note open Iodine.md` opens that note in front and closes the bar. (The
-  parse, `focus: true`, and closing are unit-tested; not yet run natively.)
+- [x] **COMPLETED** (2026-10-20) — `/note open Iodine.md` opens that note in front and closes the bar
+  (native: `/note open Garden.md` in the Phase 3 check).
+- [x] **COMPLETED** (2026-10-20) — `/selection ai` with a word selected opens an AI review of it
+  (native, Phase 3 check).
 - [x] **COMPLETED** — `/frobnicate` reports an unknown command and opens nothing.
 - [x] **COMPLETED** — Typing `document list` (no slash) sends it to the Language Model.
 - [x] **COMPLETED** — A request opens the sidebar and streams the reply in the current chat.
@@ -129,15 +130,15 @@ Chat panes are dropped. The bar sends requests to the sidebar instead.
 - [x] **COMPLETED** — With the CLI signed out, a request explains the gap and sends nothing.
 - [x] **COMPLETED** — A command dispatched after focus moved still targets the source tab.
 
-## Open decisions
+## Decisions (2026-10-19, continued)
 
-- Whether the bar replaces Phase 2's local open-note search portal, or the
-  portal stays as a separate local-only tool.
+4. **The search portal stays** as a separate local-only tool. The bar does not
+   replace it.
+5. **`/selection ai` is typeable.** A command whose input is a captured selection
+   takes the source note's current selection, read when the command runs.
 
 ## Follow-up noted while building
 
-- `selection ai` (AI review of a selection) takes a captured selection target, so
-  the bar cannot run it. In Markdown notes it was reachable only by typing that
-  target as JSON into the old command line; it remains reachable from the search
-  portal's **AI review…**. Filling a selection target from the source note would
-  make `/selection ai` typeable, if wanted.
+- Resolved 2026-10-20 (Decision 5): commands that take a captured selection read
+  the source note's selection when they run, so `/selection ai`, `lookup`, `define`,
+  `copy`, `paste`, and `voice` are typeable.
