@@ -5,7 +5,7 @@ import { registerImageCommands, type FetchedImage, type ImageDeps } from "./imag
 
 const png: FetchedImage = { mimeType: "image/png", data: "iVBORw0KGgo=", bytes: 2_400_000, source: "https://upload.wikimedia.org/a.png" };
 
-function fixture(overrides: Partial<ImageDeps> = {}) {
+function fixture(overrides: Partial<ImageDeps> = {}, notesRoot: string | null = "/Notes") {
   const deps: ImageDeps = {
     fetch: vi.fn(async () => png),
     read: vi.fn(async (path: string) => ({ ...png, source: path })),
@@ -18,7 +18,7 @@ function fixture(overrides: Partial<ImageDeps> = {}) {
     ...overrides,
   };
   const commands = new FeatureCommands();
-  registerImageCommands(commands, deps);
+  registerImageCommands(commands, deps, () => notesRoot);
   const run = (args: Record<string, unknown>) => commands.dispatch({ command: "image view", args, requestId: crypto.randomUUID() }, "ai");
   return { deps, commands, run };
 }
@@ -38,6 +38,15 @@ describe("image view", () => {
     const f = fixture();
     expect(await f.run({ path: "/Notes/set.jpg" })).toMatchObject({ ok: true, data: { source: "/Notes/set.jpg" } });
     expect(f.deps.read).toHaveBeenCalledWith("/Notes/set.jpg");
+  });
+
+  it("reads a Notes-relative path inside the Notes folder, as the note commands' paths are", async () => {
+    const f = fixture();
+    expect(await f.run({ path: "swatch.png" })).toMatchObject({ ok: true, data: { source: "/Notes/swatch.png" } });
+    expect(await f.run({ path: "Drafts/cover.jpg" })).toMatchObject({ ok: true, data: { source: "/Notes/Drafts/cover.jpg" } });
+    expect(await f.run({ path: "../secrets.png" })).toMatchObject({ ok: false, error: { code: "INVALID_ARGUMENTS" } });
+    expect(f.deps.read).toHaveBeenCalledTimes(2);
+    expect(await fixture({}, null).run({ path: "swatch.png" })).toMatchObject({ ok: false, error: { code: "UNAVAILABLE" } });
   });
 
   it("needs exactly one of url and path", async () => {

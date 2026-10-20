@@ -192,9 +192,11 @@ Four items remained open. What the code does today, from a survey on 2026-10-17:
 
 - [x] **COMPLETED** — The system prompt names the path for "find X in my notes": `notes search`,
   `note open`, then `selection set` on the match.
-- [ ] Live check (in the Phase 3 smoke, section 5): two notes on disk, one
-  containing a phrase; ask the Assistant to find and open it; the right note
-  opens with the phrase selected.
+- [x] **COMPLETED** (2026-10-19) — Live check: two notes on disk, one containing "seventeen
+  gulls" and the other "Seventeen tulips". Asked to find and open the phrase,
+  Claude Haiku 5.5 ran `notes search` → `note open` → `document read` →
+  `selection set`. Lighthouse.md opened with exactly "seventeen gulls" selected.
+  This ran in `scripts/native-macos-vision-smoke.js` rather than the Phase 3 smoke.
 
 ## 4 — Failure paths
 

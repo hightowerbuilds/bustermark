@@ -303,7 +303,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
   registerBackgroundCommands(commands, backgrounds);
   registerColorSchemeCommands(commands, colorSchemes, { settings: () => store.settings, update: actions.updateSettings, palette: () => store.palette });
   registerWebSearchCommands(commands);
-  registerImageCommands(commands);
+  registerImageCommands(commands, undefined, () => store.notesRoot);
   const printing = createPrinting({
     tabs: () => store.tabs,
     text: id => engines.get(id)?.getText() ?? store.fileTexts[id],

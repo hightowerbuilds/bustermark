@@ -1,6 +1,6 @@
 # Image viewing for the Assistant
 
-Status: **BUILT** (2026-10-17). Sections 1–3 are implemented and tested (unit, Rust, and live network checks of DuckDuckGo, Wikimedia Commons, and page images); the live check through the Language Model in the app (section 4) remains.
+Status: **COMPLETE** (2026-10-19). Built 2026-10-17; checked live through the Language Model in the app with all three providers on 2026-10-19 (section 4).
 
 The Assistant can't see pictures. Asked for a shader matching *Blade Runner*'s
 opening shot, it said its web search "returns titles, URLs and text snippets, not
@@ -100,10 +100,21 @@ fallback all answered.
 ## 4 — Verification
 
 - [x] **COMPLETED** — Unit and Rust tests above; `bunx tsc --noEmit` (713 frontend, 85 Rust).
-- [ ] Live, in disposable storage: Claude Code views a public-domain painting by
-  URL (e.g. on Wikimedia Commons) and describes its colors correctly; `web images`
-  (DuckDuckGo) finds and views a picture; `web search` answers without a key. Repeat `image view` on Codex and
-  OpenCode and record whether each passes images through.
+- [x] **COMPLETED** (2026-10-19) — Live, in disposable storage
+  (`scripts/native-macos-vision-smoke.js`, 14 of 14):
+  - Claude Haiku 5.5 viewed *The Starry Night* on Wikimedia Commons by URL
+    ("ultramarine blue and glowing yellow").
+  - It also viewed a swatch in the Notes folder whose color is chosen at random per
+    run, so it could only know it by looking ("Purple").
+  - `web images` sent 4 thumbnails, and it described the first lighthouse.
+  - `web search` answered without a key ("1889", with a cited link).
+  - `image view` passes images through on Codex and on OpenCode with a model that
+    sees images (`opencode-go/claude-haiku-5-5`): both named the swatch.
+- [x] **COMPLETED** (2026-10-19) — Found in the live check: `image view` sent `path` to Rust
+  unchanged, and Rust accepts only full paths, so a Notes-relative path such as
+  `"swatch.png"` (the form every note command uses) failed with "no existing
+  ancestor". A relative path is now resolved inside the Notes folder with the
+  note commands' `notePath`, which refuses `..`. Tested.
 - [x] **COMPLETED** — Docs: `docs/internal-commands.md` (the commands and network rules), README.
 
 ## Open question for the writer

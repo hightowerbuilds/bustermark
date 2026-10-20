@@ -111,6 +111,15 @@ the app cache's `assistant-attachments` folder can be checked from outside. Thre
 small live requests; a few minutes. Its report is
 `Notes/native-macos-attachments-smoke-result.json`; success is `ok: true`.
 
+`python3 scripts/prepare-native-macos-smoke.py vision` stages the Assistant's
+image viewing and phrase search check (growth/phases/image-viewing.md and
+phase-3.md section 3). It seeds a swatch in a random color plus two notes. Claude
+Haiku views a Wikimedia Commons painting by URL and the swatch, uses `web images`
+and keyless `web search`, and finds "seventeen gulls" (opening Lighthouse.md with
+it selected). Codex and OpenCode then name the swatch. Writes are approved
+automatically. About seven small live requests. Its report is
+`Notes/native-macos-vision-smoke-result.json`; success is `ok: true`.
+
 For printing, prepare a disposable bundle with fixture routing using:
 
 ```sh

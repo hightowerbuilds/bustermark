@@ -7,7 +7,7 @@ import tempfile
 import uuid
 
 parser = argparse.ArgumentParser()
-parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments"])
+parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments", "vision"])
 parser.add_argument("--only", choices=["courier", "polish", "emphasis"], help="run a single section of the spread smoke test")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
@@ -49,6 +49,22 @@ if args.kind == "scheme":
         "  return mix(u.paper, u.accent, w * 0.35 * u.strength);\n}\n")
     (backgrounds / "index.json").write_text(json.dumps({"version": 1, "selected": None, "strength": 0.35, "animate": False,
         "items": [{"id": "bg-smoke", "name": "Smoke waves", "prompt": "", "createdAt": 1, "updatedAt": 1}]}))
+def solid_png(width, height, rgb):
+    import struct, zlib
+    row = b"\x00" + bytes(rgb) * width
+    chunk = lambda kind, data: struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(row * height, 9)) + chunk(b"IEND", b""))
+if args.kind == "vision":
+    # A swatch whose color the model can only name by looking, and two notes for phrase search.
+    import random
+    color, rgb = random.choice([("orange", (245, 130, 20)), ("purple", (120, 40, 170)), ("yellow", (240, 220, 30))])
+    fixtures = notes / "vision-fixtures"
+    fixtures.mkdir(parents=True, exist_ok=True)
+    (notes / "swatch.png").write_bytes(solid_png(96, 96, rgb))
+    (fixtures / "expected-color.txt").write_text(color)
+    (notes / "Lighthouse.md").write_text("# Lighthouse\n\nAt dawn the keeper counted seventeen gulls on the rail.\n")
+    (notes / "Garden.md").write_text("# Garden\n\nSeventeen tulips came up by the gate.\n")
 if args.kind == "attachments":
     # Real files to drop and pick: solid-color PNGs (one larger than the 1568 px shrink),
     # a text file with a word the model must repeat, and files the chat must refuse.
