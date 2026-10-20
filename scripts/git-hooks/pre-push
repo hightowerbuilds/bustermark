@@ -1,0 +1,27 @@
+#!/bin/sh
+# Lint Rust before it leaves this machine; CI does not run Clippy.
+# Enable once per clone: git config core.hooksPath scripts/git-hooks
+# Skip in an emergency with: git push --no-verify
+
+zero=0000000000000000000000000000000000000000
+rust_changed=false
+
+# Git passes one line per pushed ref: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # Deleting a remote branch.
+  if [ "$remote_sha" = "$zero" ]; then
+    range="$local_sha" # A new branch: compare against everything already on the remote.
+    files=$(git log --format= --name-only "$range" --not --remotes 2>/dev/null)
+  else
+    files=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null)
+  fi
+  case "$files" in *src-tauri/*) rust_changed=true ;; esac
+done
+
+$rust_changed || exit 0
+
+echo "pre-push: Rust changed; running Clippy…"
+if ! cargo clippy --manifest-path src-tauri/Cargo.toml --locked --workspace --all-targets -- -D warnings; then
+  echo "pre-push: Clippy found problems. Fix them, or push with --no-verify to skip." >&2
+  exit 1
+fi

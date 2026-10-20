@@ -782,7 +782,7 @@ mod tests {
         assert_eq!(tool_content(&reply), json!({"content": [
             {"type": "text", "text": "1 image attached"}, {"type": "image", "data": "/9j/4AAQ", "mimeType": "image/jpeg"},
         ], "isError": false}));
-        assert!(check_images(&[image.clone()]).is_ok());
+        assert!(check_images(std::slice::from_ref(&image)).is_ok());
         assert!(check_images(&[ToolImage { mime_type: "image/svg+xml".into(), ..image.clone() }]).is_err());
         assert!(check_images(&[ToolImage { data: "not base64!".into(), ..image.clone() }]).is_err());
         assert!(check_images(&vec![image; MAX_TOOL_IMAGES + 1]).is_err());

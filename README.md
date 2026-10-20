@@ -63,10 +63,12 @@ Install Rust, Bun, and Xcode Command Line Tools. From this repository:
 bun install --cwd packages/buster-path
 bun run --cwd packages/buster-path build
 bun install --frozen-lockfile
+git config core.hooksPath scripts/git-hooks
 bun run tauri dev
 ```
 
-Stop an older dev instance before launching the updated native app.
+The `git config` line enables a pre-push hook that runs Clippy whenever the
+commits being pushed change `src-tauri/`; CI does not lint. Stop an older dev instance before launching the updated native app.
 
 ## Mac shortcuts
 
@@ -93,6 +95,12 @@ bun run build
 cargo test --manifest-path src-tauri/Cargo.toml --workspace --locked
 bun run tauri build --bundles app,dmg
 ```
+
+CI (`.github/workflows/ci.yml`) runs the type check, the frontend and path tests,
+the build, and `cargo check` and `cargo test` on macOS. Rust is linted locally by
+the pre-push hook, not in CI. Timing
+benchmarks stay out of `bun run test` and CI, since they vary with machine load;
+run them on demand with `bun run test:perf`.
 
 Mac installers appear under `src-tauri/target/release/bundle/`. For a local debug
 app, use `bun run tauri build --debug --bundles app`.
