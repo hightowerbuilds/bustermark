@@ -1,9 +1,10 @@
 # Text motion — Pretext-driven editing UI
 
-Status: **IN PROGRESS.** The feasibility spike (§1), Define (§4), and the phrase spread (§4b) are
+Status: **COMPLETE** (2026-10-19). The feasibility spike (§1), Define (§4), and the phrase spread (§4b) are
 complete. A word opens Copy · Paste · Define over Bold · Italic · Spelling; a phrase opens Copy ·
 Bold · Italic over Search · Count · Rephrase, all in square Courier buttons. Spelling & Grammar (§5)
-and the motion engine's polish (§2, §6) are complete; only the canvas editor remains optional.
+and the motion engine's polish (§2, §6) are complete. Plain-text files keep the canvas
+selection toolbar (Decision 5).
 
 BusterMark replaces modal chrome with motion in the text itself. When the writer
 asks something of a word, the surrounding prose moves aside, opens a space, and
@@ -294,7 +295,8 @@ glyph-by-glyph first frame within 1px (72/72 checks).
 - [x] **COMPLETED** (2026-10-12) — Long notes: words that start and end outside the
   visible part of the note jump straight to their places, and neighbouring
   paragraphs join only when on screen.
-- [ ] Optional later: bring the Spread menu to the canvas plain-text editor.
+- [x] **DECIDED** (2026-10-19) — Not bringing the Spread menu to the canvas plain-text
+  editor; it keeps its selection toolbar (Decision 5).
 
 ## Decisions (2026-10-11)
 
@@ -305,9 +307,13 @@ glyph-by-glyph first frame within 1px (72/72 checks).
    subscription CLI (Claude Code, Codex, or OpenCode). There is no native checker.
 4. **Definitions kept as notes** (2026-10-12): Keep as note saves a new note in the
    Notes folder rather than a review tab.
-3. **Scope:** Markdown notes (ProseMirror) first; plain-text canvas files later.
+3. **Scope:** Markdown notes (ProseMirror) only; plain-text canvas files keep the
+   selection toolbar (Decision 5).
+5. **Plain text keeps the toolbar** (2026-10-19): Spread stays in Markdown notes and
+   does not replace the canvas editor's selection toolbar (`SelectionActions.tsx`:
+   Copy, Paste, Voice, Look up, AI). Spread's motion is built for flowing prose, and
+   several of its actions (Bold, Italic, drop caps) have no meaning in plain text.
 
 ## Open questions
 
-1. **The existing selection toolbar** in the canvas editor. Should Spread
-   eventually replace it everywhere?
+None. The selection-toolbar question was answered by Decision 5.
