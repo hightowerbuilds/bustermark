@@ -4,7 +4,7 @@ import { buildAssistantTools, type AssistantTool, type ToolTarget } from "./assi
 import type { AssistantTransport, CliStatus, SessionEvent, ToolCall, ToolImage } from "./assistant-transport";
 import { composeMessage, type ChatAttachment } from "./chat-attachments";
 import type { FeatureCommands } from "./feature-commands";
-import { isAiProvider, type AiProvider } from "./ai-oneshot";
+import { isAiProvider, type AiProvider, type OpencodeModel } from "./ai-oneshot";
 
 /** "" leaves the choice to Claude Code, which picks the default model for the writer's plan. */
 export const ASSISTANT_MODELS = [
@@ -21,9 +21,20 @@ export type Effort = typeof EFFORTS[number];
 
 /** The command-line tool behind each provider, as the writer installed it. */
 export const cliName = (provider: AiProvider) => ({ claude: "Claude Code", codex: "Codex", opencode: "OpenCode" })[provider];
-/** Models offered for a provider; Codex and OpenCode use the writer's own default. */
-export const assistantModels = (provider: AiProvider) =>
-  provider === "claude" ? ASSISTANT_MODELS : [{ id: "", label: "Default model" }] as const;
+export interface ModelChoice { id: string; label: string; group?: "Sees images" | "Text only" }
+
+/**
+ * Models offered for a provider. Codex uses the writer's own default. OpenCode offers its default
+ * and the models it lists (`opencode models`), grouped by whether they see images.
+ */
+export function assistantModels(provider: AiProvider, opencode: readonly OpencodeModel[] = []): readonly ModelChoice[] {
+  if (provider === "claude") return ASSISTANT_MODELS;
+  const fallback: ModelChoice = { id: "", label: "Default model" };
+  if (provider !== "opencode") return [fallback];
+  const listed = [...opencode].sort((a, b) => Number(b.image) - Number(a.image) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+    .map((model): ModelChoice => ({ id: model.id, label: `${model.name} · ${model.id.split("/")[0]}`, group: model.image ? "Sees images" : "Text only" }));
+  return [fallback, ...listed];
+}
 /** Effort levels a provider and model accept: Codex goes to high; OpenCode has none. */
 export const effortsFor = (provider: AiProvider, model: string): readonly Effort[] =>
   provider === "codex" ? ["low", "medium", "high"] : provider === "opencode" || !supportsEffort(model) ? [] : EFFORTS;
@@ -415,7 +426,8 @@ export function createAssistant(deps: AssistantDeps) {
 
   function setModel(model: string) {
     setState("model", model.trim());
-    save(STORAGE.model, model.trim());
+    // The saved preference seeds new Claude chats, so another CLI's model name must not reach it.
+    if (state.provider === "claude") save(STORAGE.model, model.trim());
     applyConnection();
   }
 

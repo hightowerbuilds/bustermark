@@ -7,6 +7,11 @@ import { createAssistantWorkspace, type AssistantWorkspace } from "../lib/assist
 import { FeatureCommands } from "../lib/feature-commands";
 const context = vi.hoisted(() => ({ current: null as any }));
 vi.mock("../lib/buster-context", () => ({ useBuster: () => context.current }));
+vi.mock("../lib/ai-oneshot", async importActual => ({ ...await importActual<typeof import("../lib/ai-oneshot")>(),
+  opencodeModels: async () => [
+    { id: "opencode/beam-free", name: "Beam Free", image: false },
+    { id: "opencode-go/claude-haiku-5-5", name: "Claude Haiku 5.5", image: true },
+  ] }));
 let dispose: (() => void) | undefined, assistant: AssistantWorkspace | undefined;
 afterEach(async () => { dispose?.(); await assistant?.dispose(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 it("creates and switches saved chats, keeps drafts, searches history and confirms deletion", async () => {
@@ -43,4 +48,23 @@ it("creates and switches saved chats, keeps drafts, searches history and confirm
   const confirm = [...root.querySelectorAll<HTMLButtonElement>(".as-chat-confirm button")].find(el => el.textContent === "Delete chat")!;
   confirm.click();
   await vi.waitFor(() => expect(assistant!.state.chats).toHaveLength(1));
+});
+
+it("lists OpenCode's models in the Model menu, grouped by whether they see images", async () => {
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn() });
+  assistant = createAssistantWorkspace({ commands: new FeatureCommands(), history: { load: async () => null, save: async () => {} }, defaultProvider: () => "opencode",
+    transport: () => ({ status: async () => ({ installed: true, loggedIn: true, authMethod: null, version: null, subscription: null, detail: null }),
+      send: async () => {}, reset: async () => {}, interrupt: async () => {}, toolResult: async () => {}, subscribe: async () => () => {} }) });
+  await assistant.ready;
+  context.current = { assistant, store: { tabs: [] }, backgrounds: { byId: () => undefined } };
+  const root = document.createElement("div"); document.body.append(root);
+  dispose = render(() => createComponent(AssistantSidebar, { onClose: vi.fn() }), root);
+  const select = root.querySelector<HTMLSelectElement>('select[aria-label="Model"]')!;
+  await vi.waitFor(() => expect(select.querySelectorAll("optgroup")).toHaveLength(2));
+  expect([...select.querySelectorAll("optgroup")].map(g => [g.label, [...g.querySelectorAll("option")].map(o => o.textContent)])).toEqual([
+    ["Sees images", ["Claude Haiku 5.5 · opencode-go"]], ["Text only", ["Beam Free · opencode"]],
+  ]);
+  select.value = "opencode-go/claude-haiku-5-5";
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(assistant.state.model).toBe("opencode-go/claude-haiku-5-5");
 });

@@ -74,4 +74,20 @@ composer and go out with the next message; nothing is sent until the writer send
 - [x] **COMPLETED** (2026-10-19) — Found in the live check: the OpenCode hint said to choose a
   vision model "in the Model menu", which offers only OpenCode's default. It now
   says to set one as OpenCode's default (`model` in its `opencode.json`).
+
+## 4 — OpenCode sees images (2026-10-19)
+
+- [x] **COMPLETED** — `opencode_models` (Rust) runs `opencode models --verbose --pure` and returns
+  each active model that can call tools, with whether its input takes images. A
+  parser test covers images, tools, deprecated models, and malformed entries.
+- [x] **COMPLETED** — The Model menu for an OpenCode chat lists those models under **Sees
+  images** and **Text only**, after OpenCode's default. The hint appears only when
+  an image is attached and the chosen model isn't known to see images, and then
+  points to that group.
+- [x] **COMPLETED** — The saved model preference is a Claude model: choosing an OpenCode model no
+  longer overwrites it, and a first chat that starts on another CLI uses that CLI's
+  default instead of the saved Claude model.
+- [x] **COMPLETED** — Live: the attachments smoke now picks `opencode-go/claude-haiku-5-5` from
+  the menu (27 models see images, 12 are text only); OpenCode answered "Red
+  marigold". 14 of 14 checks.
 - [x] **COMPLETED** — Docs: `docs/internal-commands.md` (Assistant sidebar), README.

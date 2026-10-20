@@ -369,7 +369,10 @@ removable chip and goes out with the next message (up to 8; nothing is sent unti
 the writer sends). Images (PNG, JPEG, GIF, WebP, HEIC; up to 20 MB) are shrunk to
 1568 px and sent as images: content blocks to Claude Code, `--image=` files to
 Codex, `--file=` files to OpenCode (which passes them only to models that can see
-images). Text files (UTF-8, up to 256 KB each, 512 KB in all) are added to the
+images). OpenCode's Model menu lists the models it reports (`opencode models
+--verbose`, through the `opencode_models` command) that can call tools, grouped
+under **Sees images** and **Text only**; with an image attached on a text-only or
+default model, the composer points to the first group. Text files (UTF-8, up to 256 KB each, 512 KB in all) are added to the
 message in a fence with their name. Other files are refused by name. Temporary
 files for Codex and OpenCode live in the app cache per chat and are replaced each
 turn. Saved chats keep the attachment names, not their contents.

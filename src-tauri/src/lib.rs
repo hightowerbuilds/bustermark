@@ -244,6 +244,7 @@ pub fn run() {
             commands::ai_cli::ai_oneshot,
             commands::ai_cli::ai_oneshot_cancel,
             commands::ai_cli::ai_providers_status,
+            commands::ai_cli::opencode_models,
             commands::web_search::web_search,
             commands::web_search::web_image_search,
             commands::web_search::web_search_configured,

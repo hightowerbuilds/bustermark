@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ASSISTANT_MODELS, createAssistant, formatElapsed, supportsEffort } from "./assistant";
+import { ASSISTANT_MODELS, assistantModels, createAssistant, formatElapsed, supportsEffort } from "./assistant";
 import { buildAssistantTools, isAssistantTool, toolName } from "./assistant-tools";
 import type { AssistantTransport, CliStatus, SendRequest, SessionEvent, ToolCall } from "./assistant-transport";
 import { FeatureCommands, emptyArgs, objectResult } from "./feature-commands";
@@ -436,6 +436,34 @@ describe("assistant through Codex and OpenCode", () => {
     await flush();
     await assistant.send("Hello again");
     expect(cc.sent[1]).toMatchObject({ provider: "opencode", resume: undefined, effort: undefined });
+  });
+
+  it("offers OpenCode's listed models, the ones that see images first", () => {
+    const listed = [
+      { id: "opencode/beam-free", name: "Beam Free", image: false },
+      { id: "opencode-go/kimi-k3", name: "Kimi K3", image: true },
+      { id: "opencode-go/claude-haiku-5-5", name: "Claude Haiku 5.5", image: true },
+    ];
+    expect(assistantModels("opencode", listed)).toEqual([
+      { id: "", label: "Default model" },
+      { id: "opencode-go/claude-haiku-5-5", label: "Claude Haiku 5.5 · opencode-go", group: "Sees images" },
+      { id: "opencode-go/kimi-k3", label: "Kimi K3 · opencode-go", group: "Sees images" },
+      { id: "opencode/beam-free", label: "Beam Free · opencode", group: "Text only" },
+    ]);
+    expect(assistantModels("opencode")).toEqual([{ id: "", label: "Default model" }]);
+    expect(assistantModels("codex", listed)).toEqual([{ id: "", label: "Default model" }]);
+  });
+
+  it("sends a chosen OpenCode model without saving it as the Claude preference", async () => {
+    const { commands } = catalog();
+    const cc = fakeClaudeCode();
+    const stored = new Map([["bustermark.assistant.model", "claude-sonnet-5"]]);
+    const assistant = createAssistant({ commands, transport: cc.transport, defaultProvider: "opencode",
+      storage: { get: k => stored.get(k) ?? null, set: (k, v) => stored.set(k, v) } });
+    assistant.setModel("opencode-go/claude-haiku-5-5");
+    await assistant.send("What color is it?");
+    expect(cc.sent[0]).toMatchObject({ provider: "opencode", model: "opencode-go/claude-haiku-5-5" });
+    expect(stored.get("bustermark.assistant.model")).toBe("claude-sonnet-5");
   });
 
   it("reports the provider's own sign-in state", async () => {

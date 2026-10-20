@@ -22,7 +22,8 @@ export function createAssistantWorkspace(deps: WorkspaceDeps) {
   });
   const initial = seed();
   try {
-    initial.model = deps.storage?.get("bustermark.assistant.model") ?? "";
+    // The saved model is a Claude model; a chat that starts on another CLI uses that CLI's default.
+    if (initial.provider === "claude") initial.model = deps.storage?.get("bustermark.assistant.model") ?? "";
     const effort = deps.storage?.get("bustermark.assistant.effort");
     if (effort && ["low", "medium", "high", "xhigh", "max"].includes(effort)) initial.effort = effort as SavedChat["effort"];
   } catch { /* Preferences are optional; the archive is authoritative. */ }

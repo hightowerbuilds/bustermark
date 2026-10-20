@@ -57,3 +57,13 @@ export function aiOneShot(request: OneShotRequest, signal: AbortSignal): Promise
 }
 
 export const aiProvidersStatus = () => invoke<ProviderStatus[]>("ai_providers_status");
+
+/** An OpenCode model that can run the Assistant's tools; `image` when it takes pictures. */
+export interface OpencodeModel { id: string; name: string; image: boolean }
+
+let opencodeModelList: Promise<OpencodeModel[]> | null = null;
+/** OpenCode's models, listed once per launch; a failed listing is retried next time. */
+export function opencodeModels(): Promise<OpencodeModel[]> {
+  opencodeModelList ??= invoke<OpencodeModel[]>("opencode_models").catch(error => { opencodeModelList = null; throw error; });
+  return opencodeModelList;
+}

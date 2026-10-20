@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch, createEffect, createSignal, on, onCleanup, onMount, type JSX } from "solid-js";
 import { useBuster } from "../lib/buster-context";
 import { assistantModels, cliName, effortsFor, formatElapsed, type AssistantEntry, type Effort } from "../lib/assistant";
-import { AI_PROVIDERS, providerName, type AiProvider } from "../lib/ai-oneshot";
+import { AI_PROVIDERS, opencodeModels, providerName, type AiProvider, type OpencodeModel } from "../lib/ai-oneshot";
 import { diffWordsWithSpace } from "diff";
 import ShaderPreview from "./ShaderPreview";
 import SchemePreview from "./SchemePreview";
@@ -139,6 +139,14 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
   const files = useChatAttachments(() => sidebar);
   const canSend = () => state.ready && !state.switching && !state.running && (!!draft().trim() || files.attachments().length > 0) && !needsSetup();
   const connection = () => CONNECTION(cliName(state.provider))[state.connection];
+  // OpenCode's own model list, fetched the first time a chat uses OpenCode.
+  const [opencodeList, setOpencodeList] = createSignal<OpencodeModel[]>([]);
+  createEffect(on(() => state.provider, provider => {
+    if (provider === "opencode") opencodeModels().then(setOpencodeList, () => {});
+  }));
+  const models = () => assistantModels(state.provider, opencodeList());
+  const modelGroups = () => (["Sees images", "Text only"] as const).map(group => ({ group, models: models().filter(m => m.group === group) })).filter(g => g.models.length);
+  const opencodeSeesImages = () => opencodeList().find(model => model.id === state.model)?.image ?? false;
 
   function submit(event?: Event) {
     event?.preventDefault();
@@ -345,8 +353,10 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
           <AttachmentChips attachments={files.attachments()} onRemove={files.remove} />
         </Show>
         <Show when={files.error()}><p class="as-attach-error" role="alert">{files.error()}</p></Show>
-        <Show when={state.provider === "opencode" && files.attachments().some(a => a.kind === "image")}>
-          <p class="as-hint">OpenCode passes images only to models that can see them, and its default model may not. To send pictures, set one that can as OpenCode's default ("model" in ~/.config/opencode/opencode.json).</p>
+        <Show when={state.provider === "opencode" && files.attachments().some(a => a.kind === "image") && !opencodeSeesImages()}>
+          <p class="as-hint">{opencodeList().some(model => model.image)
+            ? "OpenCode passes images only to models that can see them, and this one may not. Choose one under Sees images in the Model menu."
+            : "OpenCode passes images only to models that can see them, and its default model may not. Set one that can as OpenCode's default (\"model\" in ~/.config/opencode/opencode.json)."}</p>
         </Show>
         <div class="as-input">
           <textarea ref={input} data-assistant-input rows={1} value={draft()}
@@ -384,8 +394,9 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
             <select class="as-select" aria-label="Model" title="Model" value={state.model} disabled={state.running || !state.ready || state.switching}
               onFocus={() => { if (!state.running) void assistant.refreshStatus(); }}
               onChange={e => assistant.setModel(e.currentTarget.value)}>
-              <For each={assistantModels(state.provider)}>{m => <option value={m.id}>{m.label}</option>}</For>
-              <Show when={!assistantModels(state.provider).some(m => m.id === state.model)}>
+              <For each={models().filter(m => !m.group)}>{m => <option value={m.id}>{m.label}</option>}</For>
+              <For each={modelGroups()}>{g => <optgroup label={g.group}><For each={g.models}>{m => <option value={m.id}>{m.label}</option>}</For></optgroup>}</For>
+              <Show when={!models().some(m => m.id === state.model)}>
                 <option value={state.model}>{state.model}</option>
               </Show>
             </select>

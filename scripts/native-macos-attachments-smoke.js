@@ -1,7 +1,8 @@
 // Inject only into a disposable build whose identifier contains ".parity-smoke".
 // Live acceptance for chat attachments (growth/phases/chat-attachments.md, section 3):
 // the limits and refusals, then a paste and a drop to Claude Code, the Attach picker
-// to Codex, and a drop to OpenCode, each answered on the writer's real subscription,
+// to Codex, and a drop to OpenCode on a vision model chosen from its Model menu,
+// each answered on the writer's real subscription,
 // plus Stop with attachments and temporary-file cleanup. The OS drag and the macOS
 // file picker cannot be driven from the page: a drop arrives as Tauri's own drag-drop
 // event with real paths, and only the picker call is answered with real paths.
@@ -154,18 +155,26 @@ void (async () => {
     assert(/red/i.test(lastReply()) && /marigold/i.test(lastReply()), `Codex sees the picked image and reads the text file (${lastReply().trim()})`);
     await hold('codex-sent');
 
-    // OpenCode: a drop, with its own default model.
+    // OpenCode: a drop, then a model that sees images chosen from its own list.
     await newChat('opencode');
     await hold('codex-reset');
+    const modelSelect = () => document.querySelector('.assistant-sidebar select[aria-label="Model"]');
+    const group = label => [...modelSelect().querySelectorAll('optgroup')].find(g => g.label === label);
+    await wait(() => group('Sees images'), "OpenCode's model list", 30);
+    metrics.opencodeModels = { seesImages: group('Sees images').querySelectorAll('option').length, textOnly: group('Text only')?.querySelectorAll('option').length ?? 0 };
+    assert(metrics.opencodeModels.seesImages > 0, `The Model menu lists OpenCode models that see images (${metrics.opencodeModels.seesImages})`);
     await drop([file('red.png'), file('marigold.txt')]);
     await wait(() => chips().length === 2, 'dropped for OpenCode');
-    metrics.opencodeHint = document.querySelector('.as-hint')?.textContent ?? '';
-    assert(!!metrics.opencodeHint, 'OpenCode shows its note about models that can see images');
+    const hint = () => document.querySelector('.as-hint')?.textContent ?? '';
+    metrics.opencodeHint = hint();
+    assert(hint().includes('Choose one under Sees images'), `On its default model, OpenCode points to the models that see images (${hint()})`);
+    pick('Model', 'opencode-go/claude-haiku-5-5');
+    await wait(() => !hint(), 'hint gone for a vision model');
+    assert(true, 'Choosing a model that sees images clears the note');
     await send(QUESTION);
     await finished('OpenCode reply', 240);
     metrics.opencode = lastReply();
-    metrics.opencodeSawImage = /red/i.test(lastReply());
-    assert(/marigold/i.test(lastReply()), `OpenCode reads the text file (${lastReply().trim()})`);
+    assert(/red/i.test(lastReply()) && /marigold/i.test(lastReply()), `OpenCode on a vision model sees the image and reads the text file (${lastReply().trim()})`);
 
     await report({ ok: true, checks, metrics, pageErrors });
     key(window, 'q', 'KeyQ', { metaKey: true });

@@ -34,6 +34,20 @@ async function harness(initial: unknown = null) {
 const done: SessionEvent = { kind: "result", isError: false };
 
 describe("saved assistant conversations", () => {
+  it("starts a first chat on another CLI with that CLI's default, not the saved Claude model", async () => {
+    const stored = new Map([["bustermark.assistant.model", "claude-sonnet-5"]]);
+    const storage = { get: (k: string) => stored.get(k) ?? null, set: (k: string, v: string) => { stored.set(k, v); } };
+    const history: ChatHistoryStorage = { load: async () => null, save: async () => {} };
+    const make = (provider: "claude" | "opencode") => {
+      const manager = createAssistantWorkspace({ commands: new FeatureCommands(), history, storage, defaultProvider: () => provider, transport: () => transport().api });
+      sessions.push(manager); return manager;
+    };
+    const opencode = make("opencode"); await opencode.ready;
+    expect([opencode.state.provider, opencode.state.model]).toEqual(["opencode", ""]);
+    const claude = make("claude"); await claude.ready;
+    expect([claude.state.provider, claude.state.model]).toEqual(["claude", "claude-sonnet-5"]);
+  });
+
   it("keeps transcripts, drafts, model choices and Claude sessions separate across switching and restart", async () => {
     const h = await harness(); const a = h.manager.state.activeId;
     await h.manager.send("Plan a garden");

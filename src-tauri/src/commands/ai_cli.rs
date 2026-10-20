@@ -327,6 +327,57 @@ pub fn ai_oneshot_cancel(state: State<'_, AiCliState>, request_id: String) -> Re
     Ok(entry.is_some())
 }
 
+/// An OpenCode model the Assistant can use (it calls tools), and whether it takes images.
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OpencodeModel {
+    /// `provider/model`, as `--model` takes it.
+    id: String,
+    name: String,
+    image: bool,
+}
+
+/// `opencode models --verbose` prints each model's `provider/model` line followed by its JSON.
+fn parse_opencode_models(text: &str) -> Vec<OpencodeModel> {
+    let mut models = Vec::new();
+    let mut entry: Option<(String, String)> = None;
+    let finish = |entry: Option<(String, String)>, models: &mut Vec<OpencodeModel>| {
+        let Some((id, json)) = entry else { return };
+        let Ok(value) = serde_json::from_str::<Value>(&json) else { return };
+        let capabilities = &value["capabilities"];
+        if capabilities["toolcall"].as_bool() != Some(true) || value["status"].as_str() == Some("deprecated") { return; }
+        models.push(OpencodeModel {
+            name: value["name"].as_str().unwrap_or(&id).to_owned(),
+            image: capabilities["input"]["image"].as_bool().unwrap_or(false),
+            id,
+        });
+    };
+    for line in text.lines() {
+        let header = !line.starts_with(char::is_whitespace) && !line.starts_with(['{', '}']) && line.contains('/') && !line.contains(' ');
+        if header {
+            finish(entry.take(), &mut models);
+            entry = Some((line.trim().to_owned(), String::new()));
+        } else if let Some((_, json)) = entry.as_mut() {
+            json.push_str(line);
+            json.push('\n');
+        }
+    }
+    finish(entry.take(), &mut models);
+    models
+}
+
+/// OpenCode's models that can run the Assistant's tools, marked by whether they see images.
+#[command]
+pub async fn opencode_models() -> Result<Vec<OpencodeModel>, String> {
+    let cli = find_cli(Provider::Opencode.binary()).await.ok_or_else(|| Provider::Opencode.install_hint().to_string())?;
+    let output = tokio::time::timeout(Duration::from_secs(20),
+        Command::new(&cli).args(["models", "--verbose", "--pure"]).stdin(Stdio::null()).output()).await
+        .map_err(|_| "OpenCode took too long to list its models.".to_string())?
+        .map_err(|_| "OpenCode could not list its models.".to_string())?;
+    if !output.status.success() { return Err("OpenCode could not list its models.".into()); }
+    Ok(parse_opencode_models(&String::from_utf8_lossy(&output.stdout)))
+}
+
 async fn quick(cli: &PathBuf, args: &[&str]) -> Option<std::process::Output> {
     tokio::time::timeout(Duration::from_secs(15), Command::new(cli).args(args).stdin(Stdio::null()).output()).await.ok()?.ok()
 }
@@ -386,6 +437,24 @@ mod tests {
     }
     fn pair<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         args.iter().position(|a| a == flag).map(|i| args[i + 1].as_str())
+    }
+
+    #[test]
+    fn lists_opencode_models_that_call_tools_and_marks_the_ones_that_see_images() {
+        let model = |name: &str, image: bool, tools: bool, status: &str| format!(
+            "{{\n  \"name\": \"{name}\",\n  \"status\": \"{status}\",\n  \"capabilities\": {{\n    \"toolcall\": {tools},\n    \"input\": {{\n      \"text\": true,\n      \"image\": {image}\n    }}\n  }}\n}}\n");
+        let text = [
+            format!("opencode-go/claude-haiku-5-5\n{}", model("Claude Haiku 5.5", true, true, "active")),
+            format!("opencode/beam-free\n{}", model("Beam Free", false, true, "active")),
+            format!("opencode/no-tools\n{}", model("No Tools", true, false, "active")),
+            format!("opencode/old\n{}", model("Old", true, true, "deprecated")),
+            "opencode/broken\n{ not json\n".into(),
+        ].concat();
+        assert_eq!(parse_opencode_models(&text), vec![
+            OpencodeModel { id: "opencode-go/claude-haiku-5-5".into(), name: "Claude Haiku 5.5".into(), image: true },
+            OpencodeModel { id: "opencode/beam-free".into(), name: "Beam Free".into(), image: false },
+        ]);
+        assert!(parse_opencode_models("").is_empty());
     }
 
     #[test]
