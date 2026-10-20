@@ -100,6 +100,17 @@ pauses at `suggestions` and `result` for an outside screenshot until
 `ack-<stage>.txt` appears in its Notes folder. Its report is
 `Notes/native-macos-command-bar-smoke-result.json`; success is `ok: true`.
 
+`python3 scripts/prepare-native-macos-smoke.py attachments` stages the chat
+attachments check (growth/phases/chat-attachments.md). It seeds real fixture files
+in `Notes/attach-fixtures/`, checks the limits and refusals, then sends a pasted
+image and a dropped text file to Claude Haiku, picked files to Codex, and dropped
+files to OpenCode's default model, and stops a response mid-flight. Drops arrive as
+Tauri's drag-drop event with real paths; only the file picker call is answered by
+the harness. At `codex-sent` and `codex-reset` it waits for `ack-<stage>.txt` so
+the app cache's `assistant-attachments` folder can be checked from outside. Three
+small live requests; a few minutes. Its report is
+`Notes/native-macos-attachments-smoke-result.json`; success is `ok: true`.
+
 For printing, prepare a disposable bundle with fixture routing using:
 
 ```sh

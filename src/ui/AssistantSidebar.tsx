@@ -346,7 +346,7 @@ export default function AssistantSidebar(props: { onClose: () => void }) {
         </Show>
         <Show when={files.error()}><p class="as-attach-error" role="alert">{files.error()}</p></Show>
         <Show when={state.provider === "opencode" && files.attachments().some(a => a.kind === "image")}>
-          <p class="as-hint">OpenCode passes images only to models that can see them; choose one in the Model menu.</p>
+          <p class="as-hint">OpenCode passes images only to models that can see them, and its default model may not. To send pictures, set one that can as OpenCode's default ("model" in ~/.config/opencode/opencode.json).</p>
         </Show>
         <div class="as-input">
           <textarea ref={input} data-assistant-input rows={1} value={draft()}

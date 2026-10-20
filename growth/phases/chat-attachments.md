@@ -1,6 +1,6 @@
 # Attachments in the Language Model chat
 
-Status: **BUILT** (2026-10-17). Sections 1 and 2 are implemented and tested; a drop in the native app with each provider remains (section 3).
+Status: **COMPLETE** (2026-10-19). Built 2026-10-17; verified in the native app with each provider on 2026-10-19 (section 3).
 
 Drag images and other files into the Language Model sidebar, paste a screenshot,
 or pick files with an **Attach** button. Attachments show as chips above the
@@ -58,9 +58,20 @@ composer and go out with the next message; nothing is sent until the writer send
 ## 3 — Verification
 
 - [x] **COMPLETED** — Unit and Rust tests; `bunx tsc --noEmit` (722 frontend, 88 Rust).
-- [ ] Live, in the app: drop an image and a text file and send them to Claude
-  Code, Codex, and OpenCode. Checked from the command line on 2026-10-17 with a
-  16×16 red PNG: Claude Code (stream-json image block) and Codex (`--image=`) both
-  answered "Red"; OpenCode (`--file=`) received it, but its default model said it
-  can't view images, so the sidebar notes that OpenCode needs a vision model.
+- [x] **COMPLETED** (2026-10-19) — Live, in the app
+  (`scripts/native-macos-attachments-smoke.js`, 12 of 12 checks):
+  - Limits: a ninth file, a 300 KB text file, and a PDF are each refused by name.
+  - Claude Code (Haiku 5.5): a pasted 2400×1600 screenshot plus a dropped text
+    file answered "Green marigold".
+  - Codex, through the Attach picker: "Red marigold".
+  - OpenCode, with its own default model: read the text file ("marigold") and said
+    that model doesn't support image input.
+  - Stop works with an attachment in flight. Codex's temporary image was in the app
+    cache after its turn and was gone after switching chats.
+  - The OS drag and the macOS picker can't be driven from the page: drops arrive
+    as Tauri's own drag-drop event with real paths, and only the picker call is
+    answered with real paths.
+- [x] **COMPLETED** (2026-10-19) — Found in the live check: the OpenCode hint said to choose a
+  vision model "in the Model menu", which offers only OpenCode's default. It now
+  says to set one as OpenCode's default (`model` in its `opencode.json`).
 - [x] **COMPLETED** — Docs: `docs/internal-commands.md` (Assistant sidebar), README.
