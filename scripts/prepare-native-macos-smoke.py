@@ -7,7 +7,7 @@ import tempfile
 import uuid
 
 parser = argparse.ArgumentParser()
-parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme"])
+parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar"])
 parser.add_argument("--only", choices=["courier", "polish", "emphasis"], help="run a single section of the spread smoke test")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent

@@ -1,4 +1,4 @@
-/* Command line switchboard */
+/* Command bar: / runs a command, anything else goes to the Language Model */
 .command-line-backdrop {
   position: fixed;
   inset: 0;
@@ -38,7 +38,6 @@
 }
 
 .command-line-shell button:disabled { opacity: 0.5; cursor: default; }
-.command-line-examples { display: flex; flex-wrap: wrap; gap: 6px; }
 .command-line-result {
   margin: 0;
   max-height: 36vh;
@@ -120,4 +119,83 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.command-line-caption kbd {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.command-bar-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.command-bar-suggestions li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 5px 6px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.command-bar-suggestions li.is-highlighted {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.command-bar-usage {
+  flex-shrink: 0;
+  color: var(--text);
+  font: 13px/1.4 var(--font-mono);
+}
+
+.command-bar-description {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-bar-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+
+.command-bar-result.is-error { border-left-color: var(--red); }
+
+.command-bar-result-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.command-bar-result-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 30vh;
+  overflow: auto;
+  color: var(--text-dim);
+  font: 12px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.command-bar-raw summary {
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
 }

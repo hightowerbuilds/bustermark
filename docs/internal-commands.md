@@ -3,28 +3,42 @@
 BusterMark provides a command service inside the application. It operates the same
 state and actions used by the UI. It does not execute shell command strings.
 
-## Human command entry
+## Human command entry: the command bar
 
-Open the command line with **Ctrl+`**, enter an app command, and press Enter.
-Arguments are an optional JSON object after the command name:
+Open the command bar with **Ctrl+`** or the toolbar's **/ Command** button
+(`src/ui/CommandBar.tsx`, `src/lib/command-bar.ts`; plan in
+`growth/phases/phase-4.md`). One line serves two purposes:
+
+- A line that starts with `/` runs an app command, as the `user` caller, and
+  shows a readable result in the bar (the raw result is under **Raw result**).
+  A command never opens the Language Model sidebar, even when it fails.
+- Anything else is sent to the Language Model sidebar's current chat, exactly as
+  if it were typed there. Start a line with `//` to send a request that itself
+  begins with a slash. If the chat is still answering, or its CLI is missing or
+  signed out, the text stays in the bar with an explanation and nothing is sent.
 
 ```text
-help
-commands describe {"name":"document read"}
-app status
-workspace inspect
-document list
-document create
-document read {"tabId":"file_1"}
-tab focus {"tabId":"file_1"}
-history list
+/help
+/app status
+/notes list
+/notes search tide tables
+/note open Drafts/idea.md
+/document create
+/document read
+/commands describe note open
 ```
 
-Use IDs returned by discovery/list operations. A document read returns the live
-editor text, including unsaved edits, and its revision.
+The bar offers only commands that need no JSON: ones that take no arguments,
+ones whose single required argument is a string (filled from the rest of the
+line), and ones whose single required argument is `tabId` (filled with the tab
+the bar was opened over, captured before focus moved). Typing after `/`
+completes command names; Tab accepts the highlighted one. `/note open` brings the
+note to the front, and the bar closes after `note open` and `document create`.
+Anything that needs more, such as revisions, captured targets, or edit lists, is
+asked of the Language Model in plain words. A JSON object after a command name
+is still read, for testing, but the bar does not advertise it.
 
-Use `commands list` for the current catalog and `commands describe` for a
-command's exact schema. Tabs are the only workspace targets. `document create`
+Use `/commands describe <name>` for a command's description. Tabs are the only workspace targets. `document create`
 takes no arguments and appends an active tab; `tab focus`
 activates any open tab by `tabId`. There is no pane limit.
 
@@ -48,8 +62,7 @@ version 2 session format; legacy pane layouts are read only for migration.
 ## Printing
 
 ```text
-document list
-document print {"tabId":"<actual open document ID>"}
+/document print
 ```
 
 `document print` captures the open document's current draft, including unsaved
@@ -58,7 +71,7 @@ the printer or Save as PDF, copies, pages, paper size, orientation, and sides.
 The command accepts only `tabId`; model arguments cannot bypass confirmation or
 choose an output path. It does not change the focused tab or editor contents.
 
-The human command line and Language Model use the same service. Its promise
+The command bar and Language Model use the same service. Its promise
 waits for confirmation or cancellation. The result has `status` (`submitted`,
 `saved`, or `cancelled`), `title`, and the relevant `printer` or PDF `path`.
 `submitted` means macOS accepted the job, rather than proof that paper printed.
@@ -213,7 +226,7 @@ terminals, utility tabs, and non-Markdown files.
 
 ## Local search portal
 
-`search portal open` opens a **Search** tab from the command line. The `search *`
+`/search portal open` opens a **Search** tab from the command bar. The `search *`
 commands are withheld from the Language Model, which finds phrases with
 `notes search`, `note open`, and `selection set` instead. The portal's scope is
 **open notes**, including unsaved engine text; it makes no network requests.
@@ -248,8 +261,8 @@ and web search follow the Claude/Codex connection milestone.
 
 ## Writing appearance, previews, presets, and effects
 
-**Writing appearance** is set through these commands: from the command line, or by
-the Language Model, which asks for approval in plain words ("Change the layout of
+**Writing appearance** is set through these commands by the Language Model,
+which asks for approval in plain words ("Change the layout of
 Mercury.md?") and offers **Undo** under each allowed change. Settings › Writing ›
 **Note layout** lists the notes, folder, or defaults with their own layout, each with
 **Reset**. There is no separate appearance dialog. App defaults

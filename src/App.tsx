@@ -4,7 +4,7 @@ import CanvasTabBar from "./ui/CanvasTabBar";
 import CanvasStatusBar from "./ui/CanvasStatusBar";
 import FindReplace from "./ui/FindReplace";
 import CommandPalette from "./ui/CommandPalette";
-import CommandLineSwitchboard from "./ui/CommandLineSwitchboard";
+import CommandBar from "./ui/CommandBar";
 import PanelLayout from "./ui/PanelLayout";
 import SpeechDock from "./ui/SpeechDock";
 import FooterNav from "./ui/FooterNav";
@@ -27,6 +27,8 @@ const App: Component = () => {
   const { store, setStore, engines, actions, assistant, printing } = useBuster();
   let ideRootRef: HTMLDivElement | undefined;
   const [commandLineVisible, setCommandLineVisible] = createSignal(false);
+  // The tab the command bar was opened over, so a command cannot be redirected by later focus changes.
+  const [commandBarSource, setCommandBarSource] = createSignal<string | null>(null);
 
   function activateTab(tabId: string) {
     actions.switchToTab(tabId);
@@ -55,9 +57,14 @@ const App: Component = () => {
   }
 
 
+  function openCommandLine() {
+    setCommandBarSource(store.activeTabId);
+    setCommandLineVisible(true);
+  }
+
   function toggleCommandLine() {
     if (commandLineVisible()) closeCommandLine();
-    else setCommandLineVisible(true);
+    else openCommandLine();
   }
 
   function closeCommandLine() {
@@ -353,6 +360,11 @@ const App: Component = () => {
               onReorder={actions.reorderTabs}
               onOpenAlongside={actions.openTabAlongside}
             />
+            <button class="split-view-toggle" aria-label="Command bar"
+              title="Ask the Language Model, or type / for a command (Ctrl+`)" aria-keyshortcuts="Control+`"
+              aria-pressed={commandLineVisible()} onClick={toggleCommandLine}>
+              <span aria-hidden="true">/</span>Command
+            </button>
             <button class="split-view-toggle print-action" aria-label="Print current document"
               title="Print current document (Cmd/Ctrl+P)" aria-keyshortcuts="Meta+P Control+P"
               disabled={actions.activeTab()?.type !== "file" || !!printing.state.document}
@@ -404,8 +416,9 @@ const App: Component = () => {
         </Show>
       </div>
       <FooterNav />
-      <CommandLineSwitchboard
+      <CommandBar
         visible={commandLineVisible()}
+        sourceTabId={commandBarSource()}
         onClose={closeCommandLine}
         onOpenSettings={handleCommandLineSettings}
         onOpenAi={handleCommandLineAi}

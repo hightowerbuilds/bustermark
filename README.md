@@ -81,7 +81,7 @@ Stop an older dev instance before launching the updated native app.
 | Quit after saving the session | Command-Q |
 | Settings | Command-comma |
 | Language Model sidebar | Command-Shift-A |
-| Internal commands | Control-backtick |
+| Command bar (`/` runs a command; anything else asks the Language Model) | Control-backtick |
 
 ## Checks and packaging
 

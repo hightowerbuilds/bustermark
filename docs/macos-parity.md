@@ -70,7 +70,7 @@ Developer ID signing, and notarization require the configured release secrets.
 | Language Model | Command-Shift-A or the right-edge bumper |
 | New note / save / settings | Command-N / Command-S / Command-comma |
 | Print / Quick Open | Command-P / Command-Option-P |
-| Internal commands | Control-backtick; try `help`, `app status`, or `notes list` |
+| Command bar | Control-backtick; try `/help`, `/app status`, or `/notes list`, or type a request |
 | API and search keys | Login Keychain; keys stay out of saved settings |
 | Read aloud | Native AVSpeechSynthesizer and installed macOS voices |
 | Selection lookup | Installed Apple Dictionary dictionaries |

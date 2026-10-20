@@ -1,7 +1,8 @@
 # Phase 4 — AI command bar
 
-Status: **PLANNED — rewritten 2026-10-19.** Phase 3's assistant connection and
-tool loop are built, so this phase is no longer blocked on them.
+Status: **IN PROGRESS — the bar is built (2026-10-19).** Open: the search portal
+decision, a native recheck of the surrounding writing tools, and `/note open`
+end to end. Build log: [2026-10-19 command bar](../build-log/2026-10-19-command-bar.md).
 
 Turn the Ctrl+` command line into the one place a writer types to BusterMark.
 A line that starts with `/` runs an app command and reports the result in the
@@ -66,66 +67,77 @@ Chat panes are dropped. The bar sends requests to the sidebar instead.
 
 ## 4.1 — The bar
 
-- [ ] Rework `CommandLineSwitchboard` into the bar: one input, Ctrl+` to open
+- [x] **COMPLETED** — Rework `CommandLineSwitchboard` into the bar: one input, Ctrl+` to open
   and close, Escape dismisses without side effects. Add a toolbar button that
   opens it.
-- [ ] Capture the source tab (and its revision and selection) when the bar
-  opens, so a later dispatch cannot be redirected to whichever tab has focus.
-- [ ] A hint under the input: "`/` runs a command · anything else goes to the
+- [x] **COMPLETED** — Capture the source tab when the bar opens, so a later dispatch
+  cannot be redirected to whichever tab has focus. Only its ID is captured: by
+  Decision 2 no bar command takes a revision or selection.
+- [x] **COMPLETED** — A hint under the input: "`/` runs a command · anything else goes to the
   Language Model". Show which provider and chat a request will go to.
-- [ ] Return focus to the source note when the bar closes.
-- [ ] Accessible name, keyboard-only use, and a polite live region for results.
+- [x] **COMPLETED** — Return focus to the source note when the bar closes.
+- [x] **COMPLETED** — Accessible name, keyboard-only use, and a polite live region for results.
 
 ## 4.2 — Commands
 
-- [ ] Parse `/name rest-of-line`: match the longest catalog name, then fill the
+- [x] **COMPLETED** — Parse `/name rest-of-line`: match the longest catalog name, then fill the
   single argument as in Decision 2. Unknown names and missing arguments report
   a readable error inline.
-- [ ] Complete command names from the catalog as the writer types after `/`,
+- [x] **COMPLETED** — Complete command names from the catalog as the writer types after `/`,
   with each command's one-line description. Only bar-eligible commands appear.
-- [ ] Dispatch through `commands.dispatch` as the `user` caller.
-- [ ] Show results as readable text, not JSON: a short summary per command
+- [x] **COMPLETED** — Dispatch through `commands.dispatch` as the `user` caller.
+- [x] **COMPLETED** — Show results as readable text, not JSON: a short summary per command
   (counts, names, the opened note), with the raw result behind a disclosure.
-- [ ] Close the bar after commands that move the writer elsewhere (`note open`,
+- [x] **COMPLETED** — Close the bar after commands that move the writer elsewhere (`note open`,
   `document create`), as the switchboard does today. `/note open` passes
   `focus: true`, since the writer asked to see the note.
-- [ ] A command never opens the sidebar, including when it fails.
+- [x] **COMPLETED** — A command never opens the sidebar, including when it fails.
 
 ## 4.3 — Requests
 
-- [ ] Send through the assistant workspace's `send`, opening the sidebar first.
+- [x] **COMPLETED** — Send through the assistant workspace's `send`, opening the sidebar first.
   Clear the bar once the message is accepted.
-- [ ] If the current chat is still answering, keep the text in the bar and say
+- [x] **COMPLETED** — If the current chat is still answering, keep the text in the bar and say
   so; do not queue or interrupt.
-- [ ] With the provider missing or signed out, say what is wrong in the bar and
+- [x] **COMPLETED** — With the provider missing or signed out, say what is wrong in the bar and
   offer the sidebar's setup view; send nothing.
-- [ ] A line that starts with `//` is sent as a request with one `/` removed,
+- [x] **COMPLETED** — A line that starts with `//` is sent as a request with one `/` removed,
   for requests that begin with a path.
 
 ## 4.4 — Existing surfaces
 
 - [x] **RESOLVED** — Chat panes are dropped; the sidebar is the chat surface.
-- [ ] Remove the switchboard's raw-JSON caption and example buttons once the bar
+- [x] **COMPLETED** — Remove the switchboard's raw-JSON caption and example buttons once the bar
   replaces them. Update README's shortcut table and `docs/internal-commands.md`
   ("Human command entry").
 - [ ] Keep selection actions, the Spread menu, writing review, speech, and
-  formatting working alongside the bar.
+  formatting working alongside the bar. The full unit suite passes; their native
+  smokes have not been rerun with the bar in place.
 - [ ] Decide the future of Phase 2's local open-note search portal (open
   decision below). Phase 3 asks the same question.
 
 ## Acceptance examples
 
-- [ ] `/document create` opens a new note, and the sidebar does not open.
-- [ ] `/notes search tide tables` lists matching notes inline.
-- [ ] `/note open Iodine.md` opens that note in front and closes the bar.
-- [ ] `/frobnicate` reports an unknown command and opens nothing.
-- [ ] Typing `document list` (no slash) sends it to the Language Model.
-- [ ] A request opens the sidebar and streams the reply in the current chat.
-- [ ] A request while the chat is answering stays in the bar with a note.
-- [ ] With the CLI signed out, a request explains the gap and sends nothing.
-- [ ] A command dispatched after focus moved still targets the source tab.
+- [x] **COMPLETED** — `/document create` opens a new note, and the sidebar does not open.
+- [x] **COMPLETED** — `/notes search tide tables` lists matching notes inline.
+- [ ] `/note open Iodine.md` opens that note in front and closes the bar. (The
+  parse, `focus: true`, and closing are unit-tested; not yet run natively.)
+- [x] **COMPLETED** — `/frobnicate` reports an unknown command and opens nothing.
+- [x] **COMPLETED** — Typing `document list` (no slash) sends it to the Language Model.
+- [x] **COMPLETED** — A request opens the sidebar and streams the reply in the current chat.
+- [x] **COMPLETED** — A request while the chat is answering stays in the bar with a note.
+- [x] **COMPLETED** — With the CLI signed out, a request explains the gap and sends nothing.
+- [x] **COMPLETED** — A command dispatched after focus moved still targets the source tab.
 
 ## Open decisions
 
 - Whether the bar replaces Phase 2's local open-note search portal, or the
   portal stays as a separate local-only tool.
+
+## Follow-up noted while building
+
+- `selection ai` (AI review of a selection) takes a captured selection target, so
+  the bar cannot run it. In Markdown notes it was reachable only by typing that
+  target as JSON into the old command line; it remains reachable from the search
+  portal's **AI review…**. Filling a selection target from the source note would
+  make `/selection ai` typeable, if wanted.

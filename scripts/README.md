@@ -92,6 +92,14 @@ edit one after approval, then Claude shows Deny, Stop, and switching provider. I
 sends small requests on the writer's real subscriptions and takes about two
 minutes. Its report is `Notes/native-macos-assistant-smoke-result.json`.
 
+`python3 scripts/prepare-native-macos-smoke.py command-bar` stages the command
+bar check (growth/phases/phase-4.md). It opens the bar from the toolbar and with
+Ctrl+`, completes and runs `/` commands inline, checks Escape returns focus to the
+note, and sends one small Claude Haiku request through the bar to the sidebar. It
+pauses at `suggestions` and `result` for an outside screenshot until
+`ack-<stage>.txt` appears in its Notes folder. Its report is
+`Notes/native-macos-command-bar-smoke-result.json`; success is `ok: true`.
+
 For printing, prepare a disposable bundle with fixture routing using:
 
 ```sh
