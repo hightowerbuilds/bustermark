@@ -190,7 +190,7 @@ Four items remained open. What the code does today, from a survey on 2026-10-17:
 
 ## 3 — Phrase search, checked live
 
-- [ ] The system prompt names the path for "find X in my notes": `notes search`,
+- [x] **COMPLETED** — The system prompt names the path for "find X in my notes": `notes search`,
   `note open`, then `selection set` on the match.
 - [ ] Live check (in the Phase 3 smoke, section 5): two notes on disk, one
   containing a phrase; ask the Assistant to find and open it; the right note
@@ -198,14 +198,16 @@ Four items remained open. What the code does today, from a survey on 2026-10-17:
 
 ## 4 — Failure paths
 
-- [ ] Re-check the connection after a `result` error or an unexpected `exit`, so
+- [x] **COMPLETED** — Re-check the connection after a `result` error or an unexpected `exit`, so
   an expired sign-in flips the status and shows the setup view with the sign-in
-  command (today only a failed send re-checks).
-- [ ] `find_cli`: honor `BUSTERMARK_CLI_DIR` in debug builds only (see Decisions).
-  Rust tests for the override and for its absence in release logic.
+  command. A failed send, a failed `result` (unless the writer stopped it), and an
+  unexpected `exit` each re-check; `assistant.test.ts` covers both new paths.
+- [x] **COMPLETED** — `find_cli`: honor `BUSTERMARK_CLI_DIR` in debug builds only (see Decisions).
+  Rust tests for the override and for its absence in release logic
+  (`cli_dir_override_is_debug_only_and_exclusive` in `ai_cli.rs`).
 - [ ] Rust tests for the spawn and exit path with a fake CLI script: missing
   binary message, nonzero exit with stderr detail, non-JSON lines skipped.
-- [ ] Frontend test: a `STALE_REVISION` from an approved `document edit` returns
+- [x] **COMPLETED** — Frontend test: a `STALE_REVISION` from an approved `document edit` returns
   to the model as an error, marks the row failed, and leaves the note unchanged.
 - [ ] Fake CLIs for the native check (`scripts/fake-cli/`): `claude` variants that
   report signed out, exit with an error mid-turn, and answer "Not logged in" in a

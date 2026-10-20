@@ -83,9 +83,19 @@ pub struct AiCliState {
     running: Mutex<HashMap<String, Option<u32>>>,
 }
 
+/// Debug builds only: a set `BUSTERMARK_CLI_DIR` is the only place searched, so failure tests can
+/// point at fake CLIs (or an empty directory for "not installed"). Release builds ignore it.
+fn cli_override(name: &str, dir: Option<std::ffi::OsString>, debug: bool) -> Option<Option<PathBuf>> {
+    let dir = dir.filter(|dir| debug && !dir.is_empty())?;
+    Some(Some(PathBuf::from(dir).join(name)).filter(|p| p.is_file()))
+}
+
 /// A GUI launch may not inherit the shell PATH, so fall back to a login shell and the usual
 /// install locations.
 pub(crate) async fn find_cli(name: &str) -> Option<PathBuf> {
+    if let Some(found) = cli_override(name, std::env::var_os("BUSTERMARK_CLI_DIR"), cfg!(debug_assertions)) {
+        return found;
+    }
     if let Some(path) = std::env::var_os("PATH").and_then(|paths| {
         std::env::split_paths(&paths).map(|dir| dir.join(name)).find(|p| p.is_file())
     }) {
@@ -376,6 +386,20 @@ mod tests {
     }
     fn pair<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         args.iter().position(|a| a == flag).map(|i| args[i + 1].as_str())
+    }
+
+    #[test]
+    fn cli_dir_override_is_debug_only_and_exclusive() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("claude"), "#!/bin/sh\n").unwrap();
+        let set = || Some(dir.path().as_os_str().to_owned());
+        assert_eq!(cli_override("claude", set(), true), Some(Some(dir.path().join("claude"))));
+        // Set but missing the binary: not installed, with no fallback to the real search.
+        assert_eq!(cli_override("codex", set(), true), Some(None));
+        // Release logic, an unset variable, and an empty one all leave the normal search in place.
+        assert_eq!(cli_override("claude", set(), false), None);
+        assert_eq!(cli_override("claude", None, true), None);
+        assert_eq!(cli_override("claude", Some("".into()), true), None);
     }
 
     #[test]

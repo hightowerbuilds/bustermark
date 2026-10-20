@@ -3,6 +3,8 @@ import { ASSISTANT_MODELS, createAssistant, formatElapsed, supportsEffort } from
 import { buildAssistantTools, isAssistantTool, toolName } from "./assistant-tools";
 import type { AssistantTransport, CliStatus, SendRequest, SessionEvent, ToolCall } from "./assistant-transport";
 import { FeatureCommands, emptyArgs, objectResult } from "./feature-commands";
+import { registerDocumentEditCommands } from "./document-edit";
+import { createEditorEngine } from "../editor/engine";
 
 function catalog() {
   const commands = new FeatureCommands();
@@ -154,6 +156,26 @@ describe("assistant through Claude Code", () => {
     expect(denied.content).toContain("declined");
   });
 
+  it("returns STALE_REVISION to the model when the note changed while an approved edit waited, leaving the note as typed", async () => {
+    const engine = createEditorEngine("the tide tables");
+    const commands = new FeatureCommands();
+    registerDocumentEditCommands(commands, { hasTab: id => id === "file_1", engine: id => id === "file_1" ? engine : undefined });
+    const cc = fakeClaudeCode();
+    const assistant = createAssistant({ commands, transport: cc.transport });
+    await assistant.send("Capitalize it");
+    cc.call({ callId: "edit-1", name: "document_edit", input: { tabId: "file_1", revision: engine.editSeq(), edits: [{ find: "the tide", replace: "The tide" }] } });
+    await vi.waitFor(() => expect(assistant.state.entries.some(e => e.kind === "tool" && e.status === "awaiting")).toBe(true));
+    // The writer keeps typing before allowing the edit.
+    engine.setCursor({ line: 0, col: 15 });
+    engine.insert(" turned");
+    assistant.approve("edit-1", true);
+    await vi.waitFor(() => expect(cc.replies).toHaveLength(1));
+    expect(cc.replies[0]).toMatchObject({ callId: "edit-1", isError: true });
+    expect(cc.replies[0].content).toMatch(/^STALE_REVISION: /);
+    expect(assistant.state.entries.find(e => e.kind === "tool")).toMatchObject({ status: "failed" });
+    expect(engine.getText()).toBe("the tide tables turned");
+  });
+
   it("answers unknown tools and schema failures with errors", async () => {
     const { commands } = catalog();
     const cc = fakeClaudeCode();
@@ -284,6 +306,33 @@ describe("assistant through Claude Code", () => {
     expect(assistant.state.running).toBe(false);
     await vi.waitFor(() => expect(assistant.state.connection).toBe("logged-out"));
     expect(assistant.state.entries[assistant.state.entries.length - 1]).toMatchObject({ kind: "notice", text: "Claude Code is not installed" });
+  });
+
+  it("rechecks the connection after a failed result or an unexpected exit, so an expired sign-in shows setup", async () => {
+    const { commands } = catalog();
+    const cc = fakeClaudeCode({ ...signedIn, loggedIn: false, detail: "Not logged in · Please run /login" });
+    const assistant = createAssistant({ commands, transport: cc.transport });
+    await assistant.send("One");
+    cc.emit(done({ isError: true, subtype: "success", text: "Not logged in · Please run /login" }));
+    await vi.waitFor(() => expect(assistant.state.connection).toBe("logged-out"));
+    expect(cc.transport.status).toHaveBeenCalledOnce();
+    await assistant.send("Two");
+    cc.emit({ kind: "exit", code: 1, detail: "Invalid API key" });
+    expect(cc.transport.status).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(assistant.state.connection).toBe("logged-out"));
+  });
+
+  it("does not recheck the connection after a successful result or the writer's stop", async () => {
+    const { commands } = catalog();
+    const cc = fakeClaudeCode();
+    const assistant = createAssistant({ commands, transport: cc.transport });
+    await assistant.send("One");
+    cc.emit(done());
+    await assistant.send("Two");
+    assistant.stop();
+    cc.emit(done({ subtype: "error_during_execution", isError: true }));
+    await flush();
+    expect(cc.transport.status).not.toHaveBeenCalled();
   });
 
   it("new chat ends the process and forgets the session", async () => {

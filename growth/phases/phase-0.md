@@ -1,6 +1,6 @@
 # Phase 0 — BusterMark foundation
 
-Status: In progress — foundation, debugger retirement, and writing brief implemented; desktop foundation verified; terminal scrollback repair outstanding.
+Status: Complete — foundation, debugger retirement, and writing brief implemented; desktop foundation verified. The integrated terminal was later retired, so its scrollback repair no longer applies.
 
 Progress and verification: [September 20 build log](../build-log/2026-09-20-phase-0.md).
 Completed tasks use `[x] COMPLETED`; unchecked tasks remain outstanding.
@@ -97,16 +97,16 @@ Keep the existing terminal implementation available throughout the rebuild.
 Its final placement in the writing workspace remains a design decision.
 
 - [x] **COMPLETED** — Preserve PTY creation, input, output, resizing, and process cleanup.
-- [ ] Preserve copy/paste, selection, scrollback, search, and terminal settings.
-  Selection/copy/paste and search now pass desktop checks; settings remain intact.
-  Fast output can lose early scrollback rows, so this task stays open. See the
-  reproduction in the build log.
+- [x] **RETIRED** — Preserve copy/paste, selection, scrollback, search, and terminal settings.
+  Selection/copy/paste and search passed desktop checks. The early-scrollback loss
+  under fast output (reproduced in the build log) was never repaired; the integrated
+  terminal was retired with the Linux parity port (README), so this no longer applies.
 - [x] **COMPLETED** — Keep terminal focus and shortcuts working as the surrounding UI changes.
 - [x] **COMPLETED** — Verify terminal behavior after changes to tabs, panels, or application state.
 
-Core implementation: `src/ui/CanvasTerminal.tsx`, the `src/ui/terminal-*` modules,
-`src-tauri/src/commands/terminal.rs`, `src-tauri/src/terminal/`, and
-`src-tauri/crates/terminal-pro/`.
+Former implementation (removed with the terminal): `src/ui/CanvasTerminal.tsx`, the
+`src/ui/terminal-*` modules, `src-tauri/src/commands/terminal.rs`, `src-tauri/src/terminal/`,
+and `src-tauri/crates/terminal-pro/`.
 
 ## 0.4 — Define the first writing workflow
 

@@ -51,6 +51,7 @@ export const ASSISTANT_SYSTEM_PROMPT = `You are the writing assistant inside Bus
 You operate the app through tools that mirror its internal command service. Use them to understand and change the writer's workspace:
 - Look before acting. Use app_status, document_list and document_read to learn which tabs exist and what they contain. Never invent tab IDs, targets, revisions or result IDs; use values returned by tools.
 - Notes live in the writer's Notes folder, including ones that are not open. Use notes_list and notes_search to find them and note_read to read one. To change a closed note, open it with note_open (it opens in the background), then use the returned tab ID and revision with document_edit. Use note_create for new notes and note_rename to rename them.
+- To find a phrase in the writer's notes ("where did I write X", "find X and open it"), call notes_search with the phrase, then note_open with the matching path (focus true when the writer wants to see it), then selection_set with the returned tab ID and revision to select the phrase. notes_search line numbers start at 1, but selection_set lines and columns start at 0: subtract one from the line, and if the matched line is cut short, read the note to find the column.
 - To change how a note looks (column width, centering, line spacing, text size, page background), get the active tab ID from app_status, call appearance_inspect with it for the revision, then appearance_apply with scope "tab" for that note. Use scope "app" only when the writer asks for every note or "from now on". appearance_presets_apply applies a saved layout such as Reading room; appearance_revert undoes the last layout change. For the app's colors, use the color scheme tools instead.
 - For a note background, write a WGSL shader and call background_create; its description gives the shader contract. Make it calm and slow so text stays readable. If it reports a SHADER_ERROR, fix the line it names and try again. Use background_read and background_update to revise one.
 - To change the words in a note (capitalization, spelling, rewording, adding or removing text), read it with document_read, then call document_edit once with every change for that note. Keep each find string short but unique, copy it exactly from the text you read (including Markdown), and change only what was asked.
@@ -233,7 +234,8 @@ export function createAssistant(deps: AssistantDeps) {
           output: u.output + (usage.output_tokens ?? 0),
           cacheRead: u.cacheRead + (usage.cache_read_input_tokens ?? 0),
         }));
-        if (event.isError && !interrupted) notice(describeResultError(event));
+        // A failed result may be an expired sign-in: re-check so the setup view can show.
+        if (event.isError && !interrupted) { notice(describeResultError(event)); void refreshStatus(); }
         if (!event.isError && state.connection !== "ready") setState("connection", "ready");
         if (state.running) endTurn();
         break;
@@ -256,6 +258,7 @@ export function createAssistant(deps: AssistantDeps) {
         if (state.running || event.code) {
           const name = cliName(state.provider);
           notice(event.detail ? `${name} stopped: ${event.detail}` : `${name} stopped unexpectedly (exit code ${event.code ?? "unknown"}).`);
+          void refreshStatus();
         }
         if (state.running) endTurn();
         break;
