@@ -37,7 +37,7 @@
     "category": "Productivity",
     "shortDescription": "A writing workbench with AI integration",
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "11.0"
     },
     "windows": {
       "nsis": {

@@ -2,8 +2,11 @@
 
 BusterMark is a macOS app. [macOS verification](docs/macos-parity.md) records
 what has been checked natively on the Mac.
-See the [October 2 build log](growth/build-log/2026-10-02-macos-parity-split-print-dmg.md)
-for the packaged Mac build and verification record.
+
+**Download:** the signed, notarized DMG for Intel Macs (macOS 11 or later) is on the
+[Releases page](https://github.com/hightowerbuilds/bustermark/releases). Open it and
+drag BusterMark to Applications. There is no Apple Silicon build yet, and no
+automatic updates; download new versions from the same page.
 
 BusterMark is a local Markdown and plain-text writing workbench built with
 Tauri 2, Rust, and SolidJS. Markdown notes use a ProseMirror block editor backed

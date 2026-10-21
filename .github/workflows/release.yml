@@ -1,26 +1,34 @@
 name: Release
 
+# Intel Macs only for now. Run by hand from the Actions tab once the signing
+# secrets below are in the repo; it refuses to build an unsigned release.
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, e.g. v0.1.0'
+        required: true
 
 permissions:
   contents: write
 
 jobs:
   build-and-release:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
-          - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: macos-latest
 
     steps:
+      - name: Require signing and notarization secrets
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then echo "::error::Missing secret $name; releases are never built unsigned."; exit 1; fi
+          done
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -31,7 +39,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: x86_64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -47,26 +55,22 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS code signing — add these secrets in GitHub repo settings when ready:
-          #   APPLE_CERTIFICATE        — Base64 .p12 certificate
+          #   APPLE_CERTIFICATE        — Base64 .p12 of the Developer ID Application certificate
           #   APPLE_CERTIFICATE_PASSWORD
-          #   APPLE_SIGNING_IDENTITY   — e.g. "Developer ID Application: Your Name (TEAMID)"
+          #   APPLE_SIGNING_IDENTITY   — "Developer ID Application: Luke Hightower (KD977J8NF6)"
           #   APPLE_ID                 — Apple ID email for notarization
           #   APPLE_PASSWORD           — App-specific password
-          #   APPLE_TEAM_ID            — 10-character Team ID
+          #   APPLE_TEAM_ID            — KD977J8NF6
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Tauri updater signing — generate with: bun tauri signer generate -w ~/.tauri/buster.key
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'BusterMark ${{ github.ref_name }}'
-          releaseBody: 'See the assets below for platform installers.'
+          tagName: ${{ inputs.tag }}
+          releaseName: 'BusterMark ${{ inputs.tag }}'
+          releaseBody: 'For Intel Macs. Download the .dmg below.'
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: '--target x86_64-apple-darwin --bundles app,dmg'

@@ -56,8 +56,11 @@ bun run tauri build --bundles app,dmg
 
 The app and disk image are under `src-tauri/target/release/bundle/`.
 For a local debug app, use `bun run tauri build --debug --bundles app`.
-Release workflows build both Apple Silicon and Intel Mac targets. Publication,
-Developer ID signing, and notarization require the configured release secrets.
+Releases are for Intel Macs (macOS 11 or later) for now.
+`scripts/release-macos-intel.sh` builds the signed, notarized, stapled DMG on this Mac
+with an App Store Connect API key. The release workflow is run by hand and refuses
+to build without the Developer ID signing and notarization secrets, so a tag push
+never publishes an unsigned build.
 
 ## Mac behavior
 
@@ -133,3 +136,8 @@ verification and inspection of the embedded executable and resources. TypeScript
 636 frontend tests, 54 path tests, and 208 native tests passed again for packaging.
 See the [release build log](../growth/build-log/2026-10-02-macos-parity-split-print-dmg.md)
 for artifact names, checksum, and signing status.
+
+v0.1.0 (2026-10-20) is the first signed release: an Intel DMG signed with the Developer
+ID, notarized by Apple (app and disk image both Accepted), and stapled. Installed from
+the DMG and launched from Finder, it opened without a Gatekeeper warning, and Claude
+Code connected. See the [Intel release build log](../growth/build-log/2026-10-20-intel-release.md).
