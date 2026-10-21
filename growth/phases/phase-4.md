@@ -1,8 +1,9 @@
 # Phase 4 — AI command bar
 
-Status: **IN PROGRESS — the bar is built (2026-10-19).** Open: a native recheck
-of the surrounding writing tools (Spread, selection, review smokes) with the bar
-in place. Build log: [2026-10-19 command bar](../build-log/2026-10-19-command-bar.md).
+Status: **COMPLETE (2026-10-20).** The bar is built, and the surrounding writing
+tools pass natively with it in place. Build logs:
+[2026-10-19 command bar](../build-log/2026-10-19-command-bar.md),
+[2026-10-20 Phase 4 close-out](../build-log/2026-10-20-phase-4.md).
 
 Turn the Ctrl+` command line into the one place a writer types to BusterMark.
 A line that starts with `/` runs an app command and reports the result in the
@@ -110,9 +111,10 @@ Chat panes are dropped. The bar sends requests to the sidebar instead.
 - [x] **COMPLETED** — Remove the switchboard's raw-JSON caption and example buttons once the bar
   replaces them. Update README's shortcut table and `docs/internal-commands.md`
   ("Human command entry").
-- [ ] Keep selection actions, the Spread menu, writing review, speech, and
-  formatting working alongside the bar. The full unit suite passes; their native
-  smokes have not been rerun with the bar in place.
+- [x] **COMPLETED** (2026-10-20) — Selection actions, the Spread menu, writing review, and
+  formatting work alongside the bar: the full native Spread check passes 169 of 169
+  (live Spelling and Rephrase included), and `/selection ai` opened an AI review in
+  the Phase 3 check. Speech has no native check; its unit tests pass.
 - [x] **RESOLVED** — The search portal stays (Decision 4).
 
 ## Acceptance examples

@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { readFile } from "./ipc";
+import { knownDiskContent, readFile } from "./ipc";
 import { showToast } from "../ui/CanvasToasts";
 import type { EditorEngine } from "../editor/engine";
 import type { Tab } from "./tab-types";
@@ -20,6 +20,7 @@ export async function setupFileWatcher(deps: FileWatcherDeps): Promise<() => voi
     if (!deps.getTabs().some(t => t.type === "file" && t.path === changedPath)) return;
 
     // Read updated content from disk
+    const known = knownDiskContent(changedPath);
     let diskContent: string;
     try {
       const file = await readFile(changedPath);
@@ -29,6 +30,8 @@ export async function setupFileWatcher(deps: FileWatcherDeps): Promise<() => voi
     }
 
     if (disposed || revisions.get(changedPath) !== revision) return;
+    // The app's own write or create, reported late.
+    if (diskContent === known) return;
     // Resolve current targets after the read: tabs may close, Save As, or change
     // while IPC is pending. Every view of the same file needs the notification.
     for (const tab of deps.getTabs().filter(t => t.type === "file" && t.path === changedPath)) {

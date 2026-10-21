@@ -380,6 +380,8 @@ void (async () => {
       footer('New Note');
       const rigidNote = await wait(() => editor() !== note && editor(), 'hard-break note');
       rigidNote.focus(); document.execCommand('insertText', false, 'A lantern above the quiet water.');
+      // Let ProseMirror read the typed line before the next key, as a person's typing would.
+      await frame();
       key(rigidNote, 'Enter', 'Enter', { shiftKey: true });
       document.execCommand('insertText', false, 'Another line below it.'); await delay(100);
       const rigidParagraph = rigidNote.querySelector('p');
@@ -404,10 +406,12 @@ void (async () => {
       const spans = [...document.querySelectorAll('.text-motion-word')].slice(0, before.length);
       assert(spans.map(span => span.textContent).join(' ') === before.map(word => word.text).join(' '), `Motion layer holds every word (${spans.length})`);
       // WebKit reports the page's text rects snapped outward to whole pixels.
-      // Snap each overlay glyph box the same way; every edge must agree.
+      // Snap each overlay glyph box the same way; every edge must agree. The enlarged
+      // target word is held to 1.5px unsnapped by the emphasis check instead.
       const errors = { left: 0, top: 0, right: 0, bottom: 0 };
       const glyphs = document.createRange();
       spans.forEach((span, index) => {
+        if (span.classList.contains('is-target')) return;
         glyphs.selectNodeContents(span);
         const rect = glyphs.getBoundingClientRect(), origin = emphasizedBefore[index];
         const edges = { left: Math.abs(Math.floor(rect.left) - origin.left), top: Math.abs(Math.floor(rect.top) - origin.top),

@@ -16,11 +16,22 @@ export interface DirEntry {
 }
 
 // File commands
+
+// What the app itself last read, wrote, or created at each path. macOS can report the
+// app's own create or save after the watcher's self-save window, so the watcher treats
+// a change whose content matches this as no change.
+const knownDisk = new Map<string, string>();
+export const knownDiskContent = (path: string) => knownDisk.get(path);
+function expectOnDisk<T>(path: string, content: string, write: Promise<T>): Promise<T> {
+  knownDisk.set(path, content);
+  return write.catch(error => { knownDisk.delete(path); throw error; });
+}
+
 export const readFile = (path: string) =>
-  invoke<FileContent>("read_file", { path });
+  invoke<FileContent>("read_file", { path }).then(file => { knownDisk.set(path, file.content); return file; });
 
 export const writeFile = (path: string, content: string, mustExist = false) =>
-  invoke<void>("write_file", { path, content, mustExist });
+  expectOnDisk(path, content, invoke<void>("write_file", { path, content, mustExist }));
 
 export const listDirectory = (path: string) =>
   invoke<DirEntry[]>("list_directory", { path });
@@ -41,7 +52,7 @@ export const moveEntry = async (source: string, destDir: string) => {
 };
 
 export const createFile = (path: string) =>
-  invoke<void>("create_file", { path });
+  expectOnDisk(path, "", invoke<void>("create_file", { path }));
 
 export const createDirectory = (path: string) =>
   invoke<void>("create_directory", { path });

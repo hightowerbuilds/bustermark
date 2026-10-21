@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { createEditorEngine } from "../editor/engine";
 import { setupFileWatcher } from "./file-watcher";
-const mocks = vi.hoisted(() => ({ receive: null as any, read: vi.fn(), unlisten: vi.fn() }));
+const mocks = vi.hoisted(() => ({ receive: null as any, read: vi.fn(), known: vi.fn((_path: string): string | undefined => undefined), unlisten: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async (_name, receive) => { mocks.receive = receive; return mocks.unlisten; }) }));
-vi.mock("./ipc", () => ({ readFile: mocks.read }));
+vi.mock("./ipc", () => ({ readFile: mocks.read, knownDiskContent: mocks.known }));
 vi.mock("../ui/CanvasToasts", () => ({ showToast: vi.fn() }));
 describe("external file changes", () => {
  it("ignores stale reads and preserves a dirty sibling while refreshing clean views", async () => {
@@ -23,6 +23,22 @@ describe("external file changes", () => {
   expect(dirty.getText()).toContain("mine");
   expect(conflicts).toHaveBeenCalledExactlyOnceWith("dirty", "note", "newest");
   stop(); clean.dispose(); dirty.dispose();
+ });
+ it("ignores the app's own create reported late, but not a real change after it", async () => {
+  const engine = createEditorEngine("");
+  engine.insert("typed right away");
+  const conflicts = vi.fn();
+  const stop = await setupFileWatcher({getTabs: () => [{id: "new", type: "file", name: "Neon.md", path: "/Neon.md"}] as any,
+   getEngine: () => engine, showConflictDialog: conflicts});
+  mocks.known.mockReturnValue("");
+  mocks.read.mockResolvedValueOnce({content: ""});
+  await mocks.receive({payload: {path: "/Neon.md"}});
+  expect(conflicts).not.toHaveBeenCalled();
+  expect(engine.getText()).toBe("typed right away");
+  mocks.read.mockResolvedValueOnce({content: "from another app"});
+  await mocks.receive({payload: {path: "/Neon.md"}});
+  expect(conflicts).toHaveBeenCalledExactlyOnceWith("new", "Neon.md", "from another app");
+  mocks.known.mockReset(); stop(); engine.dispose();
  });
  it("does not reload a closed note after the disk read completes", async () => {
   const engine = createEditorEngine("keep");
