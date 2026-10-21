@@ -7,7 +7,7 @@ import tempfile
 import uuid
 
 parser = argparse.ArgumentParser()
-parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments", "vision", "phase3"])
+parser.add_argument("kind", choices=["print", "split", "spread", "assistant", "scheme", "command-bar", "attachments", "vision", "phase3", "printer"])
 parser.add_argument("--only", choices=["courier", "polish", "emphasis"], help="run a single section of the spread smoke test")
 args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
@@ -20,7 +20,7 @@ only = f'<script>window.__SMOKE_ONLY__ = "{args.only}";</script>' if args.only e
 index.write_text(index.read_text().replace("</body>", f'{only}<script src="/{harness}"></script></body>'))
 # Tauri internals are read-only. Route only this disposable bundle through the
 # harness fixture; the normal app never includes the hook or harness.
-hook = {"print": "__PRINT_SMOKE_INVOKE__", "attachments": "__ATTACH_SMOKE_INVOKE__"}.get(args.kind)
+hook = {"print": "__PRINT_SMOKE_INVOKE__", "printer": "__PRINT_SMOKE_INVOKE__", "attachments": "__ATTACH_SMOKE_INVOKE__"}.get(args.kind)
 if hook:
     routed = 0
     for asset in (dist / "assets").glob("*.js"):
@@ -71,6 +71,14 @@ if args.kind == "phase3":
         (cli / variant).symlink_to(root / "scripts" / "fake-cli" / variant)
     (cli / "current").symlink_to(cli / "real")
     print(f"Launch with: BUSTERMARK_CLI_DIR={cli}/current BUSTERMARK_FAKE_STATE={cli} ./src-tauri/target/debug/bustermark")
+if args.kind == "printer":
+    # One Letter page for the real printer; the harness sends it to the default printer.
+    notes.mkdir(parents=True, exist_ok=True)
+    (notes / "Printer-check.md").write_text(
+        "# Printer check\n\nA one-page test of BusterMark printing on a real printer.\n\n"
+        "## Formatting\n\nThis line has **bold**, *italic*, and `a code span`.\n\n"
+        "- A first list item\n- \u201cCurly quotes\u201d \u2014 and an em dash\n- Caf\u00e9, d\u00e9j\u00e0 vu, na\u00efve, \u00c5ngstr\u00f6m, \u6771\u4eac\n\n"
+        "1. Numbered one\n2. Numbered two\n\n> A quoted line.\n\nPRINT END MARKER\n")
 if args.kind == "vision":
     # A swatch whose color the model can only name by looking, and two notes for phrase search.
     import random

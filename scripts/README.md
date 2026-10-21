@@ -165,4 +165,12 @@ swift -module-cache-path /private/tmp/bustermark-print-swift-cache scripts/verif
 ```
 
 The probe checks page counts, dimensions, text, range selection, and exclusion
-of app controls. Physical printer output still needs a configured device.
+of app controls.
+
+For real paper, `python3 scripts/prepare-native-macos-smoke.py printer` stages
+`native-macos-printer-smoke.js` with a one-page `Printer-check.md`. Build and launch as
+for printing. It opens the note with the command bar, presses Command-P, chooses the
+system default printer (never a fax queue), confirms one copy of Letter portrait,
+one-sided, and sends exactly one job; a second is refused. Its report is
+`Notes/native-macos-printer-smoke-result.json`. Confirm the job finished with
+`lpstat -W completed -o`, then check the page by hand.

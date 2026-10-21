@@ -124,7 +124,11 @@ editor preservation, model confirmation, model cancellation, and Stop. The
 [PDFKit probe](../scripts/verify-print-pdfs.swift) verified an eight-page Letter
 portrait PDF, its exact second page exported separately, and an eleven-page A4
 landscape PDF, including paper dimensions, Unicode, and the complete draft.
-These checks saved PDFs; physical printer output has not been exercised.
+These checks saved PDFs. On 2026-10-20 the
+[printer check](../scripts/native-macos-printer-smoke.js) sent one Letter page through
+the same dialog to an HP OfficeJet 3830; CUPS completed the job, and the printed page
+had its headings, inline formatting, lists, quotation, and Unicode text intact, with no
+app controls.
 
 The October 2 optimized Intel `.app` and 14.79 MiB DMG also passed image
 verification and inspection of the embedded executable and resources. TypeScript,
