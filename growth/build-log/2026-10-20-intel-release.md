@@ -1,6 +1,7 @@
 # First signed release: v0.1.0 for Intel Macs
 
-Status: **built, notarized, and installed** (2026-10-20). Apple Silicon is out of
+Status: **RELEASED** (2026-10-20). Download it from
+[hightowerbuilds.com/builds/bustermark](https://hightowerbuilds.com/builds/bustermark). Apple Silicon is out of
 scope for now; the Intel build runs there under Rosetta.
 
 ## Artifact
@@ -47,7 +48,20 @@ which hit that DMG gap in August.
 secrets, so a tag push can't publish an unsigned build. Signed CI releases need those
 secrets added to GitHub (Docket, later).
 
+## Published
+
+- GitHub Release [v0.1.0](https://github.com/hightowerbuilds/bustermark/releases/tag/v0.1.0)
+  hosts the DMG. The tag didn't start `release.yml`. The asset URL returns 200, and
+  its SHA-256 matches the stapled DMG.
+- hightowerbuilds.com (repo `hightower-builds-1.2`, commit `dc5ee5f`, deployed by
+  Vercel) has a download section on the Buster Mark page. Its button links straight
+  to the release asset, so the download starts from the site.
+- The writer downloaded it from hightowerbuilds.com in a browser, installed it, and
+  opened it without a Gatekeeper problem. This was the quarantined-download check.
+
 ## Not done
 
 - Auto-updates (Docket, later).
-- The browser-download Gatekeeper check (release step 8), after the release is public.
+- Signed releases from CI: the signing and notarization secrets aren't on GitHub yet
+  (Docket, later).
+- Apple Silicon.
