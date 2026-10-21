@@ -100,7 +100,7 @@ Its final placement in the writing workspace remains a design decision.
 - [x] **RETIRED** — Preserve copy/paste, selection, scrollback, search, and terminal settings.
   Selection/copy/paste and search passed desktop checks. The early-scrollback loss
   under fast output (reproduced in the build log) was never repaired; the integrated
-  terminal was retired with the Linux parity port (README), so this no longer applies.
+  terminal was retired (README), so this no longer applies.
 - [x] **COMPLETED** — Keep terminal focus and shortcuts working as the surrounding UI changes.
 - [x] **COMPLETED** — Verify terminal behavior after changes to tabs, panels, or application state.
 

@@ -1,9 +1,7 @@
 # BusterMark
 
-This is the macOS version of BusterMark, kept in step with
-[hightowerbuilds/bustermark-linux](https://github.com/hightowerbuilds/bustermark-linux).
-The current shared source is Linux commit `b1897d4`; see
-[macOS parity](docs/macos-parity.md) for the exact revision and platform details.
+BusterMark is a macOS app. [macOS verification](docs/macos-parity.md) records
+what has been checked natively on the Mac.
 See the [October 2 build log](growth/build-log/2026-10-02-macos-parity-split-print-dmg.md)
 for the packaged Mac build and verification record.
 
@@ -47,7 +45,7 @@ pictures from the web or your Notes folder. Drop images and text files on the
 sidebar, paste a screenshot, or use the paperclip to send them with a message. Writing actions (Rephrase in the right-click menu,
 and selection-scoped AI review) run on your own AI command-line tool and
 subscription: Claude Code, Codex, or OpenCode. BusterMark stores no AI API keys
-and calls no local models. The integrated terminal has been retired, matching Linux.
+and calls no local models. The integrated terminal has been retired.
 
 macOS retains native speech, Apple Dictionary lookup, clipboard and dictation
 integration, and Keychain storage for the Brave Search key. Version 2 sessions preserve tab

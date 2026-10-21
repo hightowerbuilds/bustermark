@@ -233,12 +233,12 @@ export function createSpeech(deps: SpeechDeps) {
 }
 export type SpeechService = ReturnType<typeof createSpeech>;
 
-export function registerSpeechCommands(commands: FeatureCommands, speech: SpeechService, available = true) {
+export function registerSpeechCommands(commands: FeatureCommands, speech: SpeechService) {
   const string: CommandSchema = { type: "string", minLength: 1 };
   const obj = (properties: Record<string, CommandSchema>): CommandSchema => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
   const job = obj({ jobId: string });
   const add = (name: string, description: string, inputSchema: CommandSchema, run: (args: any) => unknown, effect: "read" | "write" = "write") =>
-    commands.register({ name, description: available ? description : "Unavailable on Linux: speech is deferred from this release.", inputSchema, outputSchema: objectResult, run, effect, version: 1, examples: [name], available: () => available });
+    commands.register({ name, description, inputSchema, outputSchema: objectResult, run, effect, version: 1, examples: [name] });
   add("selection voice", "Open local macOS voice controls for a captured selection. Does not start audio.", snapshotSchema, target => speech.prepare(target));
   add("speech voices list", "List installed macOS voices without sending text or starting audio.", emptyArgs, async () => ({ voices: await speech.refreshVoices() }), "read");
   add("speech read", "Read only the captured, unchanged passage with an installed macOS voice. Rate is 0.1–1 and volume is 0–1. Returns a job immediately. Stop the current passage before starting another.",

@@ -12,7 +12,7 @@ function deferred<T>() {
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-function fixture(dictionaryAvailable = true) {
+function fixture() {
   const engine = createEditorEngine(original);
   const other = createEditorEngine("Another note.");
   engine.setSelection({ line: 0, col: 2 }, { line: 0, col: 9 });
@@ -32,7 +32,7 @@ function fixture(dictionaryAvailable = true) {
   });
   const review = createWritingReview({ engine: id => id === "draft" ? engine : id === "other" ? other : undefined,
     hasTab: id => tabs.has(id), openPanel, closePanel, createNote, focusSource, lookup, oneShot });
-  const commands = new FeatureCommands(); registerWritingReviewCommands(commands, review, dictionaryAvailable);
+  const commands = new FeatureCommands(); registerWritingReviewCommands(commands, review);
   const run = (command: string, args: object = target, requestId: string = crypto.randomUUID()) => commands.dispatch({ command, args: { ...args }, requestId }, "ai");
   async function completed(text = "Polished passage.") {
     const { reviewId } = review.start(target, "ai");
@@ -218,14 +218,6 @@ describe("writing review", () => {
   });
 });
 
-it("marks Linux dictionary lookup unavailable without disabling AI review", async () => {
- const f = fixture(false);
- expect(f.commands.describe("selection lookup")[0].available).toBe(false);
- expect((await f.run("selection lookup")).ok).toBe(false);
- expect(f.lookup).not.toHaveBeenCalled();
- expect((await f.run("selection ai")).ok).toBe(true); f.review.dispose();
-});
-
 describe("selection define", () => {
   it("returns the definition in place without opening a review tab", async () => {
     const f = fixture();
@@ -241,13 +233,6 @@ describe("selection define", () => {
     f.engine.setCursor({ line: 0, col: 0 }); f.engine.insert("Now ");
     const result = await f.run("selection define");
     expect(result).toMatchObject({ ok: false, error: { code: "STALE_SELECTION" } });
-    expect(f.lookup).not.toHaveBeenCalled();
-  });
-
-  it("is unavailable where offline dictionaries are", async () => {
-    const f = fixture(false);
-    expect(f.commands.describe("selection define")[0].available).toBe(false);
-    expect((await f.run("selection define")).ok).toBe(false);
     expect(f.lookup).not.toHaveBeenCalled();
   });
 });

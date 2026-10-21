@@ -86,7 +86,7 @@ export default function SelectionActions(props: Props) {
     }}>
     <div><button disabled={busy()} onClick={() => void run("copy")}>Copy</button><button disabled={busy()} onClick={() => void run("paste")}>Paste</button>
       <button aria-label="Dismiss selection actions" title="Escape — keep selection" onClick={() => dismiss(true)}>×</button></div>
-    <div><button disabled={busy() || !macNative} title={macNative ? "Read this selection aloud" : "Speech is unavailable in this Linux release"} onClick={() => void run("voice")}>Voice</button><button disabled={busy() || !macNative} title={macNative ? "Look up in local dictionaries" : "Offline dictionary lookup is unavailable in this Linux release"} onClick={() => void run("lookup")}>Look up</button><button disabled={busy()} title="Review AI suggestions beside this selection" onClick={() => void run("ai")}>AI</button>
+    <div><button disabled={busy()} title="Read this selection aloud" onClick={() => void run("voice")}>Voice</button><button disabled={busy()} title="Look up in local dictionaries" onClick={() => void run("lookup")}>Look up</button><button disabled={busy()} title="Review AI suggestions beside this selection" onClick={() => void run("ai")}>AI</button>
       <span title={`${selectionShortcut}: focus or reopen actions`} aria-label={`${selectionShortcut} opens selection actions`}>{selectionShortcut}</span></div>
   </div>}</Show>;
 }

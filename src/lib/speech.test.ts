@@ -9,7 +9,7 @@ function deferred<T>() {
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-function fixture(available = true) {
+function fixture() {
   const engine = createEditorEngine("Private prefix. Hello 🌎 reader! Private suffix.");
   engine.setSelection({ line: 0, col: 16 }, { line: 0, col: 32 });
   const target = captureSelection("note", engine)!;
@@ -25,7 +25,7 @@ function fixture(available = true) {
   const focusSource = vi.fn();
   const speech = createSpeech({ engine: id => id === "note" ? engine : undefined,
     hasTab: id => tabs.has(id), focusSource, transport });
-  const commands = new FeatureCommands(); registerSpeechCommands(commands, speech, available);
+  const commands = new FeatureCommands(); registerSpeechCommands(commands, speech);
   const run = (command: string, args: object = {}, requestId = crypto.randomUUID()) => commands.dispatch({ command, args: { ...args }, requestId }, "ai");
   const start = () => speech.read(target, "voice", 0.5, 1);
   const speaking = async () => { const result = start(); await vi.waitFor(() => expect(speech.state.job?.status).toBe("speaking")); return result.jobId; };
@@ -281,11 +281,4 @@ describe("local selection speech", () => {
     await f.speech.control(id, "stop"); expect(f.speech.hide()).toEqual({ visible: false });
     expect(f.speech.state.visible).toBe(false);
   });
-});
-
-it("marks Linux speech unavailable and refuses calls before invoking native services", async () => {
- const f = fixture(false);
- expect(f.commands.describe().filter(c => c.name.startsWith("speech") || c.name === "selection voice").every(c => !c.available)).toBe(true);
- expect((await f.run("selection voice", f.target)).ok).toBe(false);
- expect(f.transport.voices).not.toHaveBeenCalled(); f.speech.dispose();
 });

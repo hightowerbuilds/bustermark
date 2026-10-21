@@ -115,7 +115,7 @@ function moveTab(deps: Pick<CommandDeps, "tabs" | "activeTabId" | "switchToTab">
 
 // ── Default keybinding map ───────────────────────────────────────
 
-/** Default hotkey for each command. "Mod" maps to Cmd on Mac, Ctrl on Win/Linux. */
+/** Default hotkey for each command. "Mod" maps to Cmd on Mac, Ctrl elsewhere. */
 export const DEFAULT_KEYBINDINGS: Record<string, string> = {
   "file.newFile": "Mod+n",
   "file.save": "Mod+s",

@@ -190,8 +190,7 @@ build).
 
 - [x] **COMPLETED** — `selection define` (read, catalog): validates the captured
   target like the other selection commands and returns `{ query, definition,
-  source }` without opening a review tab. Unavailable where offline
-  dictionaries are (Linux). The Language Model can call it too.
+  source }` without opening a review tab. The Language Model can call it too.
 - [x] **COMPLETED** — Sizing with Pretext: the definition's pronunciation and
   senses are laid out at the opening's inner width (`prepare` + `layout`) to
   choose the opening's rows (capped at 11; longer definitions scroll inside).

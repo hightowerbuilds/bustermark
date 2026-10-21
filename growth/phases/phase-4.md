@@ -19,8 +19,7 @@ matched the code:
   tabs, split view, and a right-hand Language Model sidebar that already
   covers the chat side: streamed text and thinking, tool calls and results,
   approval cards with diffs, Stop, and multiple saved chats.
-- It said the Ctrl+` command line had been removed. That happened on Linux; the
-  Mac app still has it (`src/ui/CommandLineSwitchboard.tsx`), and it takes raw
+- It said the Ctrl+` command line had been removed. The Mac app still had it (`src/ui/CommandLineSwitchboard.tsx`), and it takes raw
   JSON arguments.
 - It said the toolbar's AI button opens the search portal. The toolbar now has
   only Print and Split View; the portal opens through `search portal open`.

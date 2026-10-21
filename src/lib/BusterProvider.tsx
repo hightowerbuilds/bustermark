@@ -239,7 +239,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
     lookup: lookupSelection,
     oneShot: aiOneShot,
   });
-  registerWritingReviewCommands(commands, writing, navigator.platform.startsWith("Mac"));
+  registerWritingReviewCommands(commands, writing);
   createEffect(() => {
     store.tabs.map(tab => tab.id);
     untrack(() => writing.reconcile());
@@ -251,7 +251,7 @@ const BusterProvider: Component<{ children: JSX.Element }> = (props) => {
     focusSource: target => { actions.switchToTab(target.tabId); focusTabPanel(target.tabId); },
     transport: nativeSpeechTransport,
   });
-  registerSpeechCommands(commands, speech, navigator.platform.startsWith("Mac"));
+  registerSpeechCommands(commands, speech);
   createEffect(() => {
     store.tabs.map(tab => tab.id);
     untrack(() => speech.reconcile());

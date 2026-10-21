@@ -1,11 +1,8 @@
 mod commands;
 mod storage;
-#[cfg(target_os = "linux")]
-mod credentials;
 pub mod workspace;
 pub mod watcher;
 
-#[cfg(not(target_os = "linux"))]
 use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 use tauri::{Emitter, Manager};
 
@@ -28,8 +25,6 @@ pub fn run() {
         .manage(commands::assistant::AssistantState::default())
         .manage(commands::ai_cli::AiCliState::default())
         .setup(|app| {
-            // Linux uses the in-app controls and shortcuts instead of a native menu bar.
-            #[cfg(not(target_os = "linux"))]
             {
                 // Build the native menu bar
                 let change_dir = MenuItem::with_id(app, "change_directory", "Change Directory", true, None::<&str>)?;

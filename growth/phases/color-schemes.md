@@ -185,8 +185,7 @@ interface and the model share one path.
   Model, approve each, and screenshot a Markdown note with a selection, the
   Courier style, and a shader background behind it.
 - [x] **COMPLETED** — README (Settings paragraph), `docs/internal-commands.md` (the five
-  commands), and `docs/macos-parity.md` (the Linux build still has Import
-  until this is ported).
+  commands), and `docs/macos-parity.md`.
 - [x] **COMPLETED** — Build log entry in `growth/build-log/`.
 - [x] **COMPLETED** — `scripts/native-macos-scheme-smoke.js` (staged with
   `prepare-native-macos-smoke.py scheme`) holds at each stage for an outside

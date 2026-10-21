@@ -30,7 +30,7 @@ export function WebSearchSettings() {
         onInput={event => setKey(event.currentTarget.value)} />
       <button type="submit" class="ai-provider-btn" disabled={busy() || !key().trim()}>{busy() ? "Saving…" : "Save search key"}</button>
     </form>
-    <p class="ai-settings-desc">Stored in your desktop keyring, separately from chat history. Linux requires an unlocked Secret Service.</p>
+    <p class="ai-settings-desc">Stored in your macOS Keychain, separately from chat history.</p>
     <p role="status" class="ai-settings-desc">{status()}</p>
   </section>;
 }

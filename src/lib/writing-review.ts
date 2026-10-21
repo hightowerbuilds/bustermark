@@ -236,14 +236,13 @@ export function createWritingReview(deps: WritingReviewDeps) {
 }
 export type WritingReviewService = ReturnType<typeof createWritingReview>;
 
-export function registerWritingReviewCommands(service: FeatureCommands, review: WritingReviewService, dictionaryAvailable = true) {
+export function registerWritingReviewCommands(service: FeatureCommands, review: WritingReviewService) {
   const string: CommandSchema = { type: "string", minLength: 1 };
   const obj = (properties: Record<string, CommandSchema>): CommandSchema => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
   const id = obj({ reviewId: string });
   const result: CommandSchema = { type: "object", additionalProperties: true };
-  const dictionaryCommands = new Set(["selection lookup", "selection define"]);
   const add = (name: string, description: string, inputSchema: CommandSchema, run: (args: any) => unknown, effect: "read" | "write" = "write") =>
-    service.register({ name, description: dictionaryCommands.has(name) && !dictionaryAvailable ? "Unavailable on Linux: offline dictionary lookup is deferred from this release." : description, inputSchema, outputSchema: result, run, effect, version: 1, examples: [name], available: () => !dictionaryCommands.has(name) || dictionaryAvailable });
+    service.register({ name, description, inputSchema, outputSchema: result, run, effect, version: 1, examples: [name] });
   add("selection lookup", "Look up a captured word or phrase in local macOS dictionaries in a review tab.", snapshotSchema, target => review.start(target, "lookup"));
   add("selection define", "Look up a captured word or phrase in local macOS dictionaries and return the definition without opening a tab. Text never leaves the machine.", snapshotSchema, target => review.define(target), "read");
   add("selection rephrase", "Start asking the writer's AI CLI (claude, codex, or opencode, on their subscription) for three rephrasings of a captured passage (up to 4,000 characters). Sends only the passage. Returns at once; poll selection rephrase read. Start at rung 0 (Claude Haiku 5.5, or Codex at low effort); on UNUSABLE, or when the writer wants stronger options, start again one rung up (Claude Sonnet 5.5 then Opus 5.5; Codex medium then high effort; OpenCode has one rung). Apply a chosen option with selection replace.",

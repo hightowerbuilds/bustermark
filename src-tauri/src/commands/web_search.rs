@@ -5,8 +5,6 @@ use std::time::Duration;
 
 const SERVICE: &str = "com.lukehightower.buster.web-search";
 
-#[cfg(target_os = "linux")]
-async fn key() -> Result<String, String> { crate::credentials::lookup(SERVICE, "brave").await }
 #[cfg(target_os = "macos")]
 async fn key() -> Result<String, String> {
     match security_framework::passwords::get_generic_password(SERVICE, "brave") {
@@ -15,7 +13,7 @@ async fn key() -> Result<String, String> {
         Err(_) => Err("Could not read the search key from Keychain".into()),
     }
 }
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(target_os = "macos"))]
 async fn key() -> Result<String, String> { Err("Secure search key storage is unavailable on this platform".into()) }
 
 #[tauri::command]
@@ -27,11 +25,9 @@ pub async fn web_search_save_key(api_key: String) -> Result<(), String> {
     if value.is_empty() || value.len() > 4096 || !value.bytes().all(|b| b.is_ascii_graphic()) {
         return Err("Enter a valid Brave Search API key.".into());
     }
-    #[cfg(target_os = "linux")]
-    { crate::credentials::store(SERVICE, "brave", value).await }
     #[cfg(target_os = "macos")]
     { security_framework::passwords::set_generic_password(SERVICE, "brave", value.as_bytes()).map_err(|_| "Could not save the search key to Keychain".into()) }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(not(target_os = "macos"))]
     { Err("Secure search key storage is unavailable on this platform".into()) }
 }
 

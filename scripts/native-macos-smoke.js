@@ -76,7 +76,7 @@ void (async () => {
       assert(!first.querySelector('strong') && first.textContent.includes('café 👋'), 'Command-Z undoes formatting in native WebKit');
       footer('Settings'); footer('Settings');
       assert(tabs().filter(tab => tab.id === 'tab-settings_tab').length === 1, 'Settings stays a single tab');
-      assert([...document.querySelectorAll('.tab-content.is-active [role="tab"]')].map(tab => tab.textContent.trim()).join(',') === 'Appearances,Hotkeys', 'Settings matches Linux categories');
+      assert([...document.querySelectorAll('.tab-content.is-active [role="tab"]')].map(tab => tab.textContent.trim()).join(',') === 'Appearances,Hotkeys', 'Settings has the Appearances and Hotkeys categories');
       assert(!document.querySelector('.writing-format-bar'), 'Settings hides the writing toolbar');
       document.getElementById(firstId).click(); await delay(1800);
       // Flush the normal save shortcut, then close clean tabs through Command-W.

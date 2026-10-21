@@ -2,7 +2,7 @@
 
 BusterMark is being rebuilt as a writing workbench with AI integration, using Tauri, Rust, and SolidJS.
 
-This reference describes the inherited implementation, including retired terminal and pane features. For the current macOS writing workspace, shared Linux revision, development commands, and platform differences, see [macOS parity](macos-parity.md) and the [README](../README.md). Historical phase plans below are retained for reference.
+This reference describes the inherited implementation, including retired terminal and pane features. For the current macOS writing workspace and development commands, see [macOS parity](macos-parity.md) and the [README](../README.md). Historical phase plans below are retained for reference.
 
 ---
 
@@ -160,7 +160,6 @@ open project -> navigate fast -> edit fast -> run in terminal -> inspect git
 - [Rust](https://rustup.rs/) (1.70+)
 - [Bun](https://bun.sh/) (1.0+)
 - On macOS: Xcode Command Line Tools (`xcode-select --install`)
-- On Linux: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev`
 - On Windows: Visual Studio Build Tools with C++ workload
 
 ### Build from Source
@@ -177,7 +176,6 @@ The built app will be at:
 - macOS: `src-tauri/target/release/bundle/macos/BusterMark.app`
 - macOS DMG: `src-tauri/target/release/bundle/dmg/Buster_0.1.0_x64.dmg`
 - Windows: `src-tauri/target/release/bundle/nsis/`
-- Linux: `src-tauri/target/release/bundle/appimage/` or `src-tauri/target/release/bundle/deb/`
 
 ### Development
 
@@ -194,7 +192,7 @@ This starts the app with hot-reload for the frontend. Rust changes trigger an au
 Open BusterMark. The welcome screen shows an ASCII particle animation and a list of recently opened folders. You can:
 
 1. Click a recent folder to reopen it
-2. Use **Cmd+O** (macOS) or **Ctrl+O** (Windows/Linux) to open a folder
+2. Use **Cmd+O** (macOS) or **Ctrl+O** (Windows) to open a folder
 3. Open the command palette with **Cmd+Shift+P** and run "Start Guided Tour" for an interactive walkthrough
 
 The guided tour teaches every feature through animated ASCII text slides. Navigate with arrow keys, exit with Escape.
@@ -1389,7 +1387,6 @@ Sensitive values (authentication tokens, SSH keys) use the OS keychain via the `
 
 - macOS: Keychain
 - Windows: Credential Manager
-- Linux: Secret Service (GNOME Keyring, KWallet)
 
 No sensitive data is stored in plaintext on disk.
 
@@ -1404,7 +1401,6 @@ No sensitive data is stored in plaintext on disk.
 - [Node.js](https://nodejs.org/) (v20+)
 - Platform-specific:
   - **macOS:** Xcode Command Line Tools
-  - **Linux:** `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev`
   - **Windows:** Visual Studio Build Tools with C++ workload
 
 ### Development Mode
@@ -1428,7 +1424,6 @@ Builds platform-specific bundles:
 
 - macOS: `.app` bundle and `.dmg` installer (Universal binary for ARM + Intel)
 - Windows: NSIS installer
-- Linux: AppImage and `.deb` package
 
 ### Running Tests
 
@@ -1452,7 +1447,7 @@ GitHub Actions workflows handle continuous integration and releases:
 - Matrix build across all supported platforms
 
 **Release (on version tag):**
-- Build platform bundles for macOS (ARM + Intel), Windows, and Linux
+- Build platform bundles for macOS (ARM + Intel) and Windows
 - Upload to GitHub Releases
 - Auto-updater endpoint for the Tauri updater plugin
 
@@ -1465,7 +1460,6 @@ GitHub Actions workflows handle continuous integration and releases:
 | macOS (ARM) | Supported | .app, .dmg |
 | macOS (Intel) | Supported | .app, .dmg |
 | Windows | Supported | NSIS installer |
-| Linux | Supported | AppImage, .deb |
 | iOS | Research | Tauri v2 mobile support available |
 | Android | Research | Tauri v2 mobile support available |
 

@@ -1,8 +1,7 @@
-# macOS parity with BusterMark Linux
+# macOS verification
 
-The shared application was ported from
-[bustermark-linux at b1897d4](https://github.com/hightowerbuilds/bustermark-linux/tree/b1897d458c81ee04f460535e66466bbc74b4bf2a).
-The exact source revision and adaptations are recorded in [linux-parity.json](linux-parity.json).
+BusterMark is built for macOS only. This file records what the app includes and
+what has been verified natively on the Mac.
 
 The Mac app uses the same tab workspace, ProseMirror Markdown editor,
 canvas text editor, spinning blackletter B welcome screen, periodic-table note
@@ -11,8 +10,7 @@ Model sidebar. The sidebar runs on Claude Code, with
 approval before document edits, saved chat history, per-chat drafts, and web
 search through a saved Brave Search key. The integrated terminal is retired.
 
-The Mac workspace also supports an optional two-pane view requested after the
-Linux port. **Split View** or a tab's **Open Alongside** menu pairs two notes,
+The Mac workspace also supports an optional two-pane view. **Split View** or a tab's **Open Alongside** menu pairs two notes,
 or a note and Settings. Each pane's selector changes that pane's tab. The divider
 resizes the pair; **Single View** and the pane expand buttons keep one visible.
 Closing either visible tab expands the survivor, and saved sessions restore the
@@ -26,7 +24,7 @@ native layout. The dedicated, script-free WebKit document contains only the
 note, with formatted Markdown or literal plain text. The backend uses AppKit
 and WebKit on macOS 11+; other platform builds report printing unavailable.
 
-The Mac app omits the IDE tooling still present in the Linux source: Git,
+The Mac app omits the IDE tooling of earlier builds: Git,
 language servers, tree-sitter highlighting, WASM extensions and their sandbox,
 the built-in browser, the Console and Problems panels, symbol search, and
 breadcrumbs. Sessions that contain those tabs skip them on restore. The canvas
@@ -36,7 +34,7 @@ intelligence.
 Color schemes differ too (October 17): the Mac app removed the VS Code theme
 **Import** button and adds schemes the Language Model makes from a description,
 checked for readability and saved to a gallery in Settings → Appearances
-(`growth/phases/color-schemes.md`). The Linux source still has Import.
+(`growth/phases/color-schemes.md`).
 
 ## Develop and build
 
@@ -101,7 +99,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --workspace --locked
 bun run tauri build --debug --bundles app
 ```
 
-CI checks Rust on macOS and Linux. Frontend tests cover last-tab welcome, editor cleanup, chat persistence,
+CI checks Rust on macOS only; Clippy runs locally before each push. Frontend tests cover last-tab welcome, editor cleanup, chat persistence,
 model transport, note edits, background playback, and session migration.
 
 Verified on an Intel Mac running macOS 26.6.2, Rust 1.97.1, and Bun 1.3.10:
